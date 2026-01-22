@@ -4,14 +4,15 @@
 //! - Active ARP scanning (Layer 2)
 //! - ICMP ping (latency measurement)
 //! - TCP port probing (service detection)
+//! - SNMP enrichment (optional)
 
 use anyhow::{Context, Result};
 use std::net::Ipv4Addr;
 use std::time::Instant;
 
 use host_discovery::{
-    active_arp_scan, calculate_subnet_ips, find_valid_interface, icmp_scan, tcp_probe_scan,
-    HostInfo, InterfaceInfo, ScanResult,
+    active_arp_scan, calculate_subnet_ips, find_valid_interface, icmp_scan, snmp_enrich,
+    tcp_probe_scan, HostInfo, InterfaceInfo, ScanResult, SNMP_ENABLED,
 };
 
 /// Logs a message to stderr
@@ -55,6 +56,19 @@ async fn scan_network(interface: &InterfaceInfo) -> Result<ScanResult> {
     // Phase 3: TCP probe scan for open ports
     let port_results = tcp_probe_scan(&arp_hosts).await?;
 
+    // Phase 4: SNMP enrichment (if enabled)
+    let host_ips: Vec<Ipv4Addr> = arp_hosts
+        .keys()
+        .filter(|ip| **ip != interface.ip)
+        .copied()
+        .collect();
+    
+    let snmp_data = if SNMP_ENABLED {
+        snmp_enrich(&host_ips).await.unwrap_or_default()
+    } else {
+        std::collections::HashMap::new()
+    };
+
     // Build results (exclude local machine from ARP - we add it separately)
     let mut active_hosts: Vec<HostInfo> = arp_hosts
         .iter()
@@ -62,20 +76,28 @@ async fn scan_network(interface: &InterfaceInfo) -> Result<ScanResult> {
         .map(|(ip, mac)| {
             let response_time = response_times.get(ip).map(|d| d.as_millis() as u64);
             let open_ports = port_results.get(ip).cloned().unwrap_or_default();
+            let snmp = snmp_data.get(ip);
             
-            let method = match (response_time.is_some(), !open_ports.is_empty()) {
+            let mut method = match (response_time.is_some(), !open_ports.is_empty()) {
                 (true, true) => "ARP+ICMP+TCP",
                 (true, false) => "ARP+ICMP",
                 (false, true) => "ARP+TCP",
                 (false, false) => "ARP",
-            };
+            }.to_string();
+            
+            if snmp.is_some() {
+                method.push_str("+SNMP");
+            }
 
             HostInfo {
                 ip: ip.to_string(),
                 mac: format!("{}", mac),
                 response_time_ms: response_time,
                 open_ports,
-                discovery_method: method.to_string(),
+                discovery_method: method,
+                hostname: snmp.and_then(|s| s.hostname.clone()),
+                system_description: snmp.and_then(|s| s.system_description.clone()),
+                uptime_seconds: snmp.and_then(|s| s.uptime_seconds),
             }
         })
         .collect();
@@ -87,6 +109,9 @@ async fn scan_network(interface: &InterfaceInfo) -> Result<ScanResult> {
         response_time_ms: Some(0),
         open_ports: Vec::new(),
         discovery_method: "LOCAL".to_string(),
+        hostname: None,
+        system_description: None,
+        uptime_seconds: None,
     });
 
     // Sort by IP

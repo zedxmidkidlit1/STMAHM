@@ -4,6 +4,7 @@
 //! - Active ARP scanning for Layer 2 discovery
 //! - ICMP ping for latency measurement
 //! - TCP port probing for service detection
+//! - SNMP enrichment for device details (optional)
 
 pub mod config;
 pub mod models;
@@ -12,5 +13,5 @@ pub mod scanner;
 
 pub use config::*;
 pub use models::*;
-pub use network::{find_valid_interface, calculate_subnet_ips, is_special_address};
-pub use scanner::{active_arp_scan, icmp_scan, tcp_probe_scan};
+pub use network::{calculate_subnet_ips, find_valid_interface, is_special_address};
+pub use scanner::{active_arp_scan, icmp_scan, snmp_enrich, tcp_probe_scan, SnmpData};

@@ -30,6 +30,13 @@ pub struct HostInfo {
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub open_ports: Vec<u16>,
     pub discovery_method: String,
+    // SNMP enrichment fields (optional)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub hostname: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub system_description: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub uptime_seconds: Option<u64>,
 }
 
 /// Network interface information with MAC address

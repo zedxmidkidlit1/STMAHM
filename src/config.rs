@@ -25,3 +25,17 @@ pub const TCP_PROBE_TIMEOUT: Duration = Duration::from_millis(500);
 
 /// Common ports to probe for host detection
 pub const TCP_PROBE_PORTS: &[u16] = &[22, 80, 443, 445, 8080, 3389, 5353, 62078];
+
+// ====== SNMP Configuration (Optional Feature) ======
+
+/// Enable SNMP enrichment for discovered hosts (disabled by default)
+pub const SNMP_ENABLED: bool = false;
+
+/// SNMP community string for v1/v2c
+pub const SNMP_COMMUNITY: &str = "public";
+
+/// SNMP query timeout
+pub const SNMP_TIMEOUT: Duration = Duration::from_secs(2);
+
+/// SNMP port
+pub const SNMP_PORT: u16 = 161;
