@@ -1,4 +1,4 @@
-//! Active ARP scanning
+//! Active ARP scanning with adaptive timing
 
 use anyhow::{anyhow, Result};
 use ipnetwork::Ipv4Network;
@@ -9,10 +9,11 @@ use pnet::packet::Packet;
 use pnet::util::MacAddr;
 use std::collections::HashMap;
 use std::net::Ipv4Addr;
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
-use crate::config::{ARP_ROUNDS, ARP_TIMEOUT_MS};
+use crate::config::{ARP_CHECK_INTERVAL_MS, ARP_IDLE_TIMEOUT_MS, ARP_MAX_WAIT_MS, ARP_ROUNDS};
 use crate::models::InterfaceInfo;
 use crate::network::is_special_address;
 
@@ -59,17 +60,15 @@ fn create_arp_request(
     buffer
 }
 
-/// Performs Active ARP scan with multiple rounds for maximum detection
+/// Performs Adaptive ARP scan with early termination
 pub fn active_arp_scan(
     interface: &InterfaceInfo,
     target_ips: &[Ipv4Addr],
     subnet: &Ipv4Network,
 ) -> Result<HashMap<Ipv4Addr, MacAddr>> {
     log_stderr!(
-        "Phase 1: Active ARP scanning {} hosts ({} rounds, {}ms per round)...",
-        target_ips.len(),
-        ARP_ROUNDS,
-        ARP_TIMEOUT_MS
+        "Phase 1: Active ARP scanning {} hosts (adaptive timing)...",
+        target_ips.len()
     );
 
     // Open datalink channel
@@ -78,7 +77,7 @@ pub fn active_arp_scan(
         Ok(_) => return Err(anyhow!("Unsupported channel type")),
         Err(e) => {
             let error_msg = format!("{}", e);
-            if error_msg.contains("requires") 
+            if error_msg.contains("requires")
                 || error_msg.contains("permission")
                 || error_msg.contains("Access")
                 || error_msg.contains("Npcap")
@@ -98,19 +97,22 @@ pub fn active_arp_scan(
         }
     };
 
-    let discovered: Arc<std::sync::Mutex<HashMap<Ipv4Addr, MacAddr>>> = 
+    let discovered: Arc<std::sync::Mutex<HashMap<Ipv4Addr, MacAddr>>> =
         Arc::new(std::sync::Mutex::new(HashMap::new()));
+    let host_count = Arc::new(AtomicUsize::new(0));
     let scan_start = Instant::now();
-    
-    let total_timeout = Duration::from_millis(ARP_TIMEOUT_MS * ARP_ROUNDS as u64 + 500);
-    
+
+    // Calculate total timeout for receiver thread (all rounds + buffer)
+    let total_timeout = Duration::from_millis(ARP_MAX_WAIT_MS * ARP_ROUNDS as u64 + 500);
+
     let discovered_clone = Arc::clone(&discovered);
+    let host_count_clone = Arc::clone(&host_count);
     let subnet_clone = subnet.clone();
 
     // Start receiver thread
     let receiver_handle = std::thread::spawn(move || {
         let deadline = Instant::now() + total_timeout;
-        
+
         while Instant::now() < deadline {
             match rx.next() {
                 Ok(packet) => {
@@ -121,10 +123,13 @@ pub fn active_arp_scan(
                                     let sender_ip = arp.get_sender_proto_addr();
                                     let sender_mac = arp.get_sender_hw_addr();
 
-                                    if subnet_clone.contains(sender_ip) && !is_special_address(sender_ip, &subnet_clone) {
+                                    if subnet_clone.contains(sender_ip)
+                                        && !is_special_address(sender_ip, &subnet_clone)
+                                    {
                                         let mut map = discovered_clone.lock().unwrap();
                                         if !map.contains_key(&sender_ip) {
                                             map.insert(sender_ip, sender_mac);
+                                            host_count_clone.fetch_add(1, Ordering::SeqCst);
                                         }
                                     }
                                 }
@@ -139,38 +144,79 @@ pub fn active_arp_scan(
         }
     });
 
+    // Give receiver time to start
     std::thread::sleep(Duration::from_millis(10));
 
-    // Send multiple rounds of ARP requests
+    // Adaptive ARP scan rounds
     for round in 1..=ARP_ROUNDS {
         let round_start = Instant::now();
-        
-        let discovered_count = discovered.lock().unwrap().len();
-        let remaining: Vec<Ipv4Addr> = target_ips.iter()
+        let initial_count = host_count.load(Ordering::SeqCst);
+
+        // Get remaining IPs to scan
+        let remaining: Vec<Ipv4Addr> = target_ips
+            .iter()
             .filter(|ip| !discovered.lock().unwrap().contains_key(ip))
             .copied()
             .collect();
-        
+
+        if remaining.is_empty() {
+            log_stderr!("Round {}/{}: All hosts found, skipping", round, ARP_ROUNDS);
+            break;
+        }
+
         log_stderr!(
-            "Round {}/{}: Sending {} requests ({} already found)...",
-            round, ARP_ROUNDS, remaining.len(), discovered_count
+            "Round {}/{}: Blasting {} requests ({} already found)...",
+            round,
+            ARP_ROUNDS,
+            remaining.len(),
+            initial_count
         );
-        
-        for target_ip in remaining {
-            let packet = create_arp_request(interface.mac, interface.ip, target_ip);
+
+        // BLAST: Send all requests as fast as possible
+        for target_ip in &remaining {
+            let packet = create_arp_request(interface.mac, interface.ip, *target_ip);
             let _ = tx.send_to(&packet, None);
         }
-        
-        let elapsed = round_start.elapsed();
-        let wait_time = Duration::from_millis(ARP_TIMEOUT_MS).saturating_sub(elapsed);
-        if wait_time > Duration::ZERO {
-            std::thread::sleep(wait_time);
+
+        // ADAPTIVE WAIT: Check periodically, stop early if idle
+        let max_wait = Duration::from_millis(ARP_MAX_WAIT_MS);
+        let check_interval = Duration::from_millis(ARP_CHECK_INTERVAL_MS);
+        let idle_timeout = Duration::from_millis(ARP_IDLE_TIMEOUT_MS);
+
+        let mut last_count = host_count.load(Ordering::SeqCst);
+        let mut last_change = Instant::now();
+
+        while round_start.elapsed() < max_wait {
+            std::thread::sleep(check_interval);
+
+            let current_count = host_count.load(Ordering::SeqCst);
+
+            if current_count > last_count {
+                // New hosts found, reset idle timer
+                last_count = current_count;
+                last_change = Instant::now();
+            } else if last_change.elapsed() >= idle_timeout {
+                // No new hosts for idle_timeout, stop early
+                log_stderr!(
+                    "Round {} early exit: no new hosts for {}ms",
+                    round,
+                    ARP_IDLE_TIMEOUT_MS
+                );
+                break;
+            }
         }
-        
-        let current_count = discovered.lock().unwrap().len();
-        log_stderr!("Round {} complete: {} hosts found so far", round, current_count);
+
+        let final_count = host_count.load(Ordering::SeqCst);
+        log_stderr!(
+            "Round {} complete: {} hosts found ({} new) in {:?}",
+            round,
+            final_count,
+            final_count - initial_count,
+            round_start.elapsed()
+        );
     }
 
+    // Wait for receiver to finish
     let _ = receiver_handle.join();
 
     let map = discovered.lock().unwrap();
@@ -183,6 +229,6 @@ pub fn active_arp_scan(
         map.len(),
         scan_start.elapsed()
     );
-    
+
     Ok(map.clone())
 }

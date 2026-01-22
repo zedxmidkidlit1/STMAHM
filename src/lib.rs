@@ -13,5 +13,5 @@ pub mod scanner;
 
 pub use config::*;
 pub use models::*;
-pub use network::{calculate_subnet_ips, find_valid_interface, is_special_address};
-pub use scanner::{active_arp_scan, icmp_scan, snmp_enrich, tcp_probe_scan, SnmpData};
+pub use network::{calculate_subnet_ips, find_valid_interface, is_local_subnet, is_special_address};
+pub use scanner::{active_arp_scan, icmp_scan, snmp_enrich, tcp_probe_scan, SnmpData, SnmpNeighbor};

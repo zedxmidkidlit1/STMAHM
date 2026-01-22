@@ -12,7 +12,7 @@ use std::time::Instant;
 
 use host_discovery::{
     active_arp_scan, calculate_subnet_ips, find_valid_interface, icmp_scan, snmp_enrich,
-    tcp_probe_scan, HostInfo, InterfaceInfo, ScanResult, SNMP_ENABLED,
+    tcp_probe_scan, HostInfo, InterfaceInfo, NeighborInfo, ScanResult, SNMP_ENABLED,
 };
 
 /// Logs a message to stderr
@@ -49,12 +49,15 @@ async fn scan_network(interface: &InterfaceInfo) -> Result<ScanResult> {
 
     let arp_count = arp_hosts.len();
 
-    // Phase 2: ICMP scan for response times
-    let response_times = icmp_scan(&arp_hosts).await?;
+    // Phase 2 & 3: Run ICMP ping and TCP probe in parallel for faster scanning
+    let (response_times_result, port_results_result) = tokio::join!(
+        icmp_scan(&arp_hosts),
+        tcp_probe_scan(&arp_hosts)
+    );
+    
+    let response_times = response_times_result?;
     let icmp_count = response_times.len();
-
-    // Phase 3: TCP probe scan for open ports
-    let port_results = tcp_probe_scan(&arp_hosts).await?;
+    let port_results = port_results_result?;
 
     // Phase 4: SNMP enrichment (if enabled)
     let host_ips: Vec<Ipv4Addr> = arp_hosts
@@ -98,6 +101,14 @@ async fn scan_network(interface: &InterfaceInfo) -> Result<ScanResult> {
                 hostname: snmp.and_then(|s| s.hostname.clone()),
                 system_description: snmp.and_then(|s| s.system_description.clone()),
                 uptime_seconds: snmp.and_then(|s| s.uptime_seconds),
+                neighbors: snmp.map(|s| {
+                    s.neighbors.iter().map(|n| NeighborInfo {
+                        local_port: n.local_port.clone(),
+                        remote_device: n.remote_device.clone(),
+                        remote_port: n.remote_port.clone(),
+                        remote_ip: n.remote_ip.clone(),
+                    }).collect()
+                }).unwrap_or_default(),
             }
         })
         .collect();
@@ -112,6 +123,7 @@ async fn scan_network(interface: &InterfaceInfo) -> Result<ScanResult> {
         hostname: None,
         system_description: None,
         uptime_seconds: None,
+        neighbors: Vec::new(),
     });
 
     // Sort by IP

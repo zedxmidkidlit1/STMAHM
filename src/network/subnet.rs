@@ -18,6 +18,16 @@ pub fn is_special_address(ip: Ipv4Addr, subnet: &Ipv4Network) -> bool {
     ip == subnet.network() || ip == subnet.broadcast()
 }
 
+/// Checks if a target IP is in the same subnet as the local interface (L2 reachable)
+/// Returns true if target is local (ARP will work), false if remote (needs L3 routing)
+pub fn is_local_subnet(target_ip: Ipv4Addr, local_interface: &InterfaceInfo) -> bool {
+    if let Ok(local_network) = Ipv4Network::new(local_interface.ip, local_interface.prefix_len) {
+        local_network.contains(target_ip)
+    } else {
+        false
+    }
+}
+
 /// Calculates the subnet range and generates the list of target IPs
 pub fn calculate_subnet_ips(interface: &InterfaceInfo) -> Result<(Ipv4Network, Vec<Ipv4Addr>)> {
     let network = Ipv4Network::new(interface.ip, interface.prefix_len)

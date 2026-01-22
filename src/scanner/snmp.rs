@@ -28,12 +28,30 @@ pub struct SnmpData {
     pub hostname: Option<String>,
     pub system_description: Option<String>,
     pub uptime_seconds: Option<u64>,
+    /// LLDP/CDP neighbor information (for topology mapping)
+    pub neighbors: Vec<SnmpNeighbor>,
+}
+
+/// LLDP/CDP neighbor info from SNMP
+#[derive(Debug, Clone)]
+pub struct SnmpNeighbor {
+    pub local_port: String,
+    pub remote_device: String,
+    pub remote_port: String,
+    pub remote_ip: Option<String>,
 }
 
 /// Common SNMP OID arrays (u64 type required by snmp2)
 const OID_SYS_NAME: &[u64] = &[1, 3, 6, 1, 2, 1, 1, 5, 0];
 const OID_SYS_DESCR: &[u64] = &[1, 3, 6, 1, 2, 1, 1, 1, 0];
 const OID_SYS_UPTIME: &[u64] = &[1, 3, 6, 1, 2, 1, 1, 3, 0];
+
+// LLDP OIDs for neighbor discovery (requires SNMP walk)
+// lldpRemSysName: 1.0.8802.1.1.2.1.4.1.1.9 - Remote system name
+// lldpRemPortId: 1.0.8802.1.1.2.1.4.1.1.7 - Remote port ID
+// lldpLocPortDesc: 1.0.8802.1.1.2.1.3.7.1.4 - Local port description
+#[allow(dead_code)]
+const OID_LLDP_REM_SYS_NAME: &[u64] = &[1, 0, 8802, 1, 1, 2, 1, 4, 1, 1, 9];
 
 /// Maximum concurrent SNMP queries
 const MAX_CONCURRENT_SNMP: usize = 20;

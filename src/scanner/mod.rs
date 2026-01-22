@@ -7,5 +7,5 @@ mod tcp;
 
 pub use arp::active_arp_scan;
 pub use icmp::icmp_scan;
-pub use snmp::{snmp_enrich, SnmpData};
+pub use snmp::{snmp_enrich, SnmpData, SnmpNeighbor};
 pub use tcp::tcp_probe_scan;

@@ -37,6 +37,23 @@ pub struct HostInfo {
     pub system_description: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub uptime_seconds: Option<u64>,
+    // LLDP/CDP neighbor discovery (for topology mapping)
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub neighbors: Vec<NeighborInfo>,
+}
+
+/// Information about a network neighbor (from LLDP/CDP)
+#[derive(Debug, Serialize, Clone)]
+pub struct NeighborInfo {
+    /// Local port name (e.g., "GigE0/1")
+    pub local_port: String,
+    /// Remote device name/hostname
+    pub remote_device: String,
+    /// Remote port name
+    pub remote_port: String,
+    /// Remote device IP (if available)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub remote_ip: Option<String>,
 }
 
 /// Network interface information with MAC address

@@ -14,11 +14,19 @@ pub const PING_RETRIES: u8 = 2;
 /// Default subnet prefix length when interface doesn't provide one
 pub const DEFAULT_PREFIX_LEN: u8 = 24;
 
-/// ARP scan timeout per round - wait time for replies
-pub const ARP_TIMEOUT_MS: u64 = 3000;
+// ====== ARP Adaptive Scan Configuration ======
 
-/// Number of ARP scan rounds
-pub const ARP_ROUNDS: u8 = 3;
+/// Maximum total wait time for ARP replies (ms)
+pub const ARP_MAX_WAIT_MS: u64 = 1500;
+
+/// Interval to check for new hosts (ms)
+pub const ARP_CHECK_INTERVAL_MS: u64 = 200;
+
+/// Stop early if no new hosts for this duration (ms)
+pub const ARP_IDLE_TIMEOUT_MS: u64 = 400;
+
+/// Number of ARP scan rounds (optional 2nd round for stragglers)
+pub const ARP_ROUNDS: u8 = 2;
 
 /// TCP probe timeout
 pub const TCP_PROBE_TIMEOUT: Duration = Duration::from_millis(500);
