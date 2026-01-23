@@ -1,4 +1,4 @@
-//! ICMP ping scanning
+//! ICMP ping scanning with TTL-based OS fingerprinting
 
 use anyhow::Result;
 use pnet::util::MacAddr;
@@ -6,7 +6,7 @@ use std::collections::HashMap;
 use std::net::{IpAddr, Ipv4Addr};
 use std::sync::Arc;
 use std::time::Duration;
-use surge_ping::{Client, Config, PingIdentifier, PingSequence};
+use surge_ping::{Client, Config, PingIdentifier, PingSequence, IcmpPacket};
 use tokio::sync::{Mutex, Semaphore};
 use std::time::Instant;
 
@@ -26,6 +26,13 @@ macro_rules! log_warn {
     };
 }
 
+/// Result of an ICMP ping including TTL for OS fingerprinting
+#[derive(Debug, Clone)]
+pub struct IcmpResult {
+    pub duration: Duration,
+    pub ttl: Option<u8>,
+}
+
 /// Generates a random ping identifier
 fn rand_id() -> u16 {
     use std::time::SystemTime;
@@ -35,8 +42,23 @@ fn rand_id() -> u16 {
     ((duration.as_nanos() % 0xFFFF) as u16).wrapping_add(1)
 }
 
-/// Pings a single IP address with retries
-async fn ping_host_with_retries(client: &Client, ip: Ipv4Addr) -> Option<Duration> {
+/// Guess the operating system based on TTL value
+/// 
+/// Common default TTL values:
+/// - Linux/Unix/macOS: 64
+/// - Windows: 128
+/// - Cisco/Network devices: 255
+pub fn guess_os_from_ttl(ttl: u8) -> String {
+    match ttl {
+        1..=64 => "Linux/Unix/macOS".to_string(),
+        65..=128 => "Windows".to_string(),
+        129..=255 => "Network Device (Router/Switch)".to_string(),
+        0 => "Unknown".to_string(),
+    }
+}
+
+/// Pings a single IP address with retries, returns duration and TTL
+async fn ping_host_with_retries(client: &Client, ip: Ipv4Addr) -> Option<IcmpResult> {
     let payload = [0u8; 56];
 
     for attempt in 0..PING_RETRIES {
@@ -48,17 +70,26 @@ async fn ping_host_with_retries(client: &Client, ip: Ipv4Addr) -> Option<Duratio
             .ping(PingSequence(attempt as u16), &payload)
             .await
         {
-            Ok(_) => return Some(start.elapsed()),
+            Ok((packet, _rtt)) => {
+                let ttl = match packet {
+                    IcmpPacket::V4(p) => p.get_ttl(),
+                    IcmpPacket::V6(_) => None,
+                };
+                return Some(IcmpResult {
+                    duration: start.elapsed(),
+                    ttl,
+                });
+            }
             Err(_) => continue,
         }
     }
     None
 }
 
-/// Performs ICMP scan on discovered hosts to get response times
+/// Performs ICMP scan on discovered hosts to get response times and TTL
 pub async fn icmp_scan(
     arp_hosts: &HashMap<Ipv4Addr, MacAddr>,
-) -> Result<HashMap<Ipv4Addr, Duration>> {
+) -> Result<HashMap<Ipv4Addr, IcmpResult>> {
     if arp_hosts.is_empty() {
         return Ok(HashMap::new());
     }
@@ -78,21 +109,21 @@ pub async fn icmp_scan(
     };
 
     let semaphore = Arc::new(Semaphore::new(MAX_CONCURRENT_PINGS));
-    let response_times = Arc::new(Mutex::new(HashMap::new()));
+    let results = Arc::new(Mutex::new(HashMap::new()));
 
     let mut handles = Vec::new();
 
     for &ip in arp_hosts.keys() {
         let client = Arc::clone(&client);
         let semaphore = Arc::clone(&semaphore);
-        let response_times = Arc::clone(&response_times);
+        let results = Arc::clone(&results);
 
         let handle = tokio::spawn(async move {
             let _permit = semaphore.acquire().await.expect("Semaphore closed");
 
-            if let Some(duration) = ping_host_with_retries(&client, ip).await {
-                let mut times = response_times.lock().await;
-                times.insert(ip, duration);
+            if let Some(icmp_result) = ping_host_with_retries(&client, ip).await {
+                let mut res = results.lock().await;
+                res.insert(ip, icmp_result);
             }
         });
 
@@ -103,8 +134,8 @@ pub async fn icmp_scan(
         let _ = handle.await;
     }
 
-    let times = response_times.lock().await;
-    log_stderr!("Phase 2 complete: {} hosts responded to ICMP", times.len());
+    let res = results.lock().await;
+    log_stderr!("Phase 2 complete: {} hosts responded to ICMP", res.len());
 
-    Ok(times.clone())
+    Ok(res.clone())
 }

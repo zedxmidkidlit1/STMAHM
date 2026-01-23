@@ -1,0 +1,177 @@
+/* Tailwind CSS v4 - CSS-first configuration */
+@import "tailwindcss";
+
+/* Custom theme configuration */
+@theme {
+  /* Border radius */
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+  
+  /* Accent colors (shared) */
+  --color-accent-blue: #3B82F6;
+  --color-accent-green: #10B981;
+  --color-accent-red: #EF4444;
+  --color-accent-amber: #F59E0B;
+  --color-accent-purple: #8B5CF6;
+  --color-accent-pink: #EC4899;
+  --color-accent-teal: #14B8A6;
+  --color-accent-orange: #F97316;
+  
+  /* Status colors */
+  --color-status-online: #22C55E;
+  --color-status-offline: #EF4444;
+  --color-status-warning: #F59E0B;
+  
+  /* Device type colors */
+  --color-device-router: #3B82F6;
+  --color-device-switch: #10B981;
+  --color-device-ap: #8B5CF6;
+  --color-device-server: #F59E0B;
+  --color-device-pc: #6B7280;
+  --color-device-mobile: #EC4899;
+  --color-device-iot: #EF4444;
+  --color-device-printer: #14B8A6;
+  --color-device-camera: #F97316;
+  --color-device-unknown: #9CA3AF;
+  
+  /* Shadows */
+  --shadow-card: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-modal: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+  
+  /* Fonts */
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+}
+
+/* ================= DARK THEME (Default) ================= */
+:root,
+.dark {
+  --color-bg-primary: #0F172A;
+  --color-bg-secondary: #1E293B;
+  --color-bg-tertiary: #334155;
+  --color-bg-hover: #475569;
+  
+  --color-text-primary: #F8FAFC;
+  --color-text-secondary: #94A3B8;
+  --color-text-muted: #64748B;
+  
+  --color-border: rgba(255, 255, 255, 0.1);
+  --color-card-bg: #1E293B;
+}
+
+/* ================= LIGHT THEME ================= */
+.light {
+  --color-bg-primary: #F8FAFC;
+  --color-bg-secondary: #FFFFFF;
+  --color-bg-tertiary: #F1F5F9;
+  --color-bg-hover: #E2E8F0;
+  
+  --color-text-primary: #0F172A;
+  --color-text-secondary: #475569;
+  --color-text-muted: #64748B;
+  
+  --color-border: rgba(0, 0, 0, 0.1);
+  --color-card-bg: #FFFFFF;
+}
+
+/* Base styles */
+body {
+  background-color: var(--color-bg-primary);
+  color: var(--color-text-primary);
+  font-family: var(--font-sans);
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Custom utilities */
+@utility glass {
+  background: rgba(30, 41, 59, 0.8);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--color-border);
+}
+
+.light .glass {
+  background: rgba(255, 255, 255, 0.8);
+}
+
+@utility card {
+  background-color: var(--color-card-bg);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  border: 1px solid var(--color-border);
+}
+
+/* Theme-aware border */
+@utility border-theme {
+  border-color: var(--color-border);
+}
+
+/* Scrollbar styling - Dark */
+.dark::-webkit-scrollbar,
+:root::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.dark::-webkit-scrollbar-track,
+:root::-webkit-scrollbar-track {
+  background: var(--color-bg-secondary);
+}
+
+.dark::-webkit-scrollbar-thumb,
+:root::-webkit-scrollbar-thumb {
+  background: var(--color-bg-tertiary);
+  border-radius: 4px;
+}
+
+.dark::-webkit-scrollbar-thumb:hover,
+:root::-webkit-scrollbar-thumb:hover {
+  background: var(--color-bg-hover);
+}
+
+/* Scrollbar styling - Light */
+.light::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.light::-webkit-scrollbar-track {
+  background: var(--color-bg-tertiary);
+}
+
+.light::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 4px;
+}
+
+.light::-webkit-scrollbar-thumb:hover {
+  background: #94A3B8;
+}
+
+/* React Flow theme overrides */
+.light .react-flow__background {
+  background-color: var(--color-bg-primary) !important;
+}
+
+.light .react-flow__minimap {
+  background-color: var(--color-bg-secondary) !important;
+}
+
+.light .react-flow__controls {
+  background-color: var(--color-bg-secondary) !important;
+  border-color: var(--color-border) !important;
+}
+
+.light .react-flow__controls button {
+  background-color: var(--color-bg-secondary) !important;
+  border-color: var(--color-border) !important;
+}
+
+.light .react-flow__controls button:hover {
+  background-color: var(--color-bg-tertiary) !important;
+}
+
+.light .react-flow__controls button svg {
+  fill: var(--color-text-primary) !important;
+}

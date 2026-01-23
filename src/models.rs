@@ -27,13 +27,25 @@ pub struct HostInfo {
     pub mac: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub vendor: Option<String>,
+    /// True if MAC is locally administered (randomized/virtual)
+    #[serde(skip_serializing_if = "std::ops::Not::not")]
+    pub is_randomized: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub response_time_ms: Option<u64>,
+    /// TTL value from ICMP response (used for OS fingerprinting)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ttl: Option<u8>,
+    /// Guessed OS based on TTL value
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub os_guess: Option<String>,
+    /// Inferred device type (ROUTER, MOBILE, PC, etc.)
+    pub device_type: String,
+    /// Risk score (0-100, higher = more risk)
+    pub risk_score: u8,
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub open_ports: Vec<u16>,
     pub discovery_method: String,
-    // SNMP enrichment fields (optional)
-    #[serde(skip_serializing_if = "Option::is_none")]
+    // DNS/SNMP hostname
     pub hostname: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub system_description: Option<String>,

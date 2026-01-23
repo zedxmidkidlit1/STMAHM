@@ -17,3 +17,4 @@ pnet = "0.34"
 pnet_datalink = "0.34"
 snmp2 = { version = "0.4", features = ["tokio"] }
 mac_oui = { version = "0.4", features = ["with-db"] }
+dns-lookup = "2.0"

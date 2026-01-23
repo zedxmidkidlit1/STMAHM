@@ -11,8 +11,9 @@ use std::net::Ipv4Addr;
 use std::time::Instant;
 
 use host_discovery::{
-    active_arp_scan, calculate_subnet_ips, find_valid_interface, icmp_scan, lookup_vendor,
-    snmp_enrich, tcp_probe_scan, HostInfo, InterfaceInfo, NeighborInfo, ScanResult, SNMP_ENABLED,
+    active_arp_scan, calculate_risk_score, calculate_subnet_ips, dns_scan, find_valid_interface,
+    guess_os_from_ttl, icmp_scan, infer_device_type, lookup_vendor_info, snmp_enrich,
+    tcp_probe_scan, HostInfo, InterfaceInfo, NeighborInfo, ScanResult, SNMP_ENABLED,
 };
 
 /// Logs a message to stderr
@@ -72,12 +73,18 @@ async fn scan_network(interface: &InterfaceInfo) -> Result<ScanResult> {
         std::collections::HashMap::new()
     };
 
+    // Phase 5: DNS reverse lookup
+    let dns_hostnames = dns_scan(&host_ips).await;
+
     // Build results (exclude local machine from ARP - we add it separately)
     let mut active_hosts: Vec<HostInfo> = arp_hosts
         .iter()
         .filter(|(ip, _)| **ip != interface.ip)
         .map(|(ip, mac)| {
-            let response_time = response_times.get(ip).map(|d| d.as_millis() as u64);
+            let icmp_result = response_times.get(ip);
+            let response_time = icmp_result.map(|r| r.duration.as_millis() as u64);
+            let ttl = icmp_result.and_then(|r| r.ttl);
+            let os_guess = ttl.map(guess_os_from_ttl);
             let open_ports = port_results.get(ip).cloned().unwrap_or_default();
             let snmp = snmp_data.get(ip);
             
@@ -93,14 +100,34 @@ async fn scan_network(interface: &InterfaceInfo) -> Result<ScanResult> {
             }
 
             let mac_str = format!("{}", mac);
+            let vendor_info = lookup_vendor_info(&mac_str);
+            
+            // Infer device type and calculate risk score
+            // Gateway detection: typically ends in .1 or has web interface on port 80
+            let is_gateway = ip.octets()[3] == 1 || open_ports.contains(&80);
+            let device_type = infer_device_type(
+                vendor_info.vendor.as_deref(),
+                dns_hostnames.get(ip).map(|s| s.as_str()),
+                &open_ports,
+                is_gateway,
+            );
+            let risk_score = calculate_risk_score(device_type, &open_ports, vendor_info.is_randomized);
+            
             HostInfo {
                 ip: ip.to_string(),
-                vendor: lookup_vendor(&mac_str),
+                vendor: vendor_info.vendor,
+                is_randomized: vendor_info.is_randomized,
                 mac: mac_str,
                 response_time_ms: response_time,
+                ttl,
+                os_guess,
+                device_type: device_type.as_str().to_string(),
+                risk_score,
                 open_ports,
                 discovery_method: method,
-                hostname: snmp.and_then(|s| s.hostname.clone()),
+                // DNS hostname takes precedence, fallback to SNMP hostname
+                hostname: dns_hostnames.get(ip).cloned()
+                    .or_else(|| snmp.and_then(|s| s.hostname.clone())),
                 system_description: snmp.and_then(|s| s.system_description.clone()),
                 uptime_seconds: snmp.and_then(|s| s.uptime_seconds),
                 neighbors: snmp.map(|s| {
@@ -117,11 +144,23 @@ async fn scan_network(interface: &InterfaceInfo) -> Result<ScanResult> {
 
     // Add local machine to results
     let local_mac = format!("{}", interface.mac);
+    let local_vendor_info = lookup_vendor_info(&local_mac);
+    let local_device_type = infer_device_type(
+        local_vendor_info.vendor.as_deref(),
+        None,
+        &[],
+        false,
+    );
     active_hosts.push(HostInfo {
         ip: interface.ip.to_string(),
-        vendor: lookup_vendor(&local_mac),
+        vendor: local_vendor_info.vendor,
+        is_randomized: local_vendor_info.is_randomized,
         mac: local_mac,
         response_time_ms: Some(0),
+        ttl: None,
+        os_guess: None,
+        device_type: local_device_type.as_str().to_string(),
+        risk_score: 0,
         open_ports: Vec::new(),
         discovery_method: "LOCAL".to_string(),
         hostname: None,

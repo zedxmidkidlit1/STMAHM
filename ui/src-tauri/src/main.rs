@@ -1,0 +1,18 @@
+//! Network Topology Mapper - Tauri Backend
+//!
+//! This module provides the bridge between the React UI and the Rust scanner.
+
+#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+
+mod commands;
+
+fn main() {
+    tauri::Builder::default()
+        .plugin(tauri_plugin_shell::init())
+        .invoke_handler(tauri::generate_handler![
+            commands::scan_network,
+            commands::get_interfaces,
+        ])
+        .run(tauri::generate_context!())
+        .expect("error while running tauri application");
+}
