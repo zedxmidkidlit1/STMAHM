@@ -7,6 +7,9 @@ on:
   workflow_dispatch:
 
 jobs:
+  # ==========================================
+  # Build job - runs on all platforms in parallel
+  # ==========================================
   build:
     permissions:
       contents: write
@@ -64,17 +67,57 @@ jobs:
         working-directory: ui
         run: npm install
 
-      # Build with tauri-action
+      # Build WITHOUT creating release (just build)
       - name: Build the app
-        uses: tauri-apps/tauri-action@v0.6
+        working-directory: ui
+        run: npm run tauri build -- ${{ matrix.args }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Upload artifacts for release job
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
         with:
-          projectPath: ui
-          tauriScript: npm run tauri
-          tagName: ${{ github.ref_name }}
-          releaseName: 'Network Topology Mapper ${{ github.ref_name }}'
-          releaseBody: |
+          name: ${{ matrix.name }}
+          path: |
+            **/target/**/release/bundle/**/*.deb
+            **/target/**/release/bundle/**/*.AppImage
+            **/target/**/release/bundle/**/*.exe
+            **/target/**/release/bundle/**/*.msi
+            **/target/**/release/bundle/**/*.dmg
+            **/target/**/release/bundle/**/*.app
+            **/target/**/release/bundle/**/*.tar.gz
+          if-no-files-found: warn
+          retention-days: 7
+
+  # ==========================================
+  # Release job - runs AFTER all builds complete
+  # ==========================================
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Display artifacts
+        run: |
+          echo "All downloaded artifacts:"
+          find artifacts -type f -name "*.exe" -o -name "*.msi" -o -name "*.dmg" -o -name "*.deb" -o -name "*.AppImage" -o -name "*.tar.gz" 2>/dev/null || echo "Listing files..."
+          ls -la artifacts/ || true
+          ls -laR artifacts/ || true
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: 'Network Topology Mapper ${{ github.ref_name }}'
+          body: |
             ## Network Topology Mapper ${{ github.ref_name }}
             
             ### Downloads
@@ -85,37 +128,14 @@ jobs:
             ### Requirements
             - **Windows**: Install [Npcap](https://npcap.com/#download) for network scanning
             - **macOS/Linux**: Run with sudo for ARP scanning
-          releaseDraft: true
+          draft: true
           prerelease: false
-          args: ${{ matrix.args }}
-
-      # 🔍 DEBUG - List all files to see exact paths
-      - name: 🔍 DEBUG - List all bundle files
-        if: always()
-        run: |
-          echo "=========================================="
-          echo "Current Working Directory:"
-          pwd
-          echo "=========================================="
-          echo "Listing ALL bundle directories recursively:"
-          find . -type d -name "bundle" 2>/dev/null || echo "No bundle directories found"
-          echo "=========================================="
-          echo "Listing ALL .exe, .msi, .dmg, .deb, .AppImage files:"
-          find . -type f \( -name "*.exe" -o -name "*.msi" -o -name "*.dmg" -o -name "*.deb" -o -name "*.AppImage" \) 2>/dev/null || echo "No installer files found"
-          echo "=========================================="
-        shell: bash
-
-      # Upload with super wildcards
-      - name: Upload build artifacts
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ matrix.name }}
-          path: |
-            **/target/release/bundle/**/*.deb
-            **/target/release/bundle/**/*.AppImage
-            **/target/release/bundle/**/*.exe
-            **/target/release/bundle/**/*.msi
-            **/target/release/bundle/**/*.dmg
-          if-no-files-found: warn
-          retention-days: 7
+          files: |
+            artifacts/**/*.exe
+            artifacts/**/*.msi
+            artifacts/**/*.dmg
+            artifacts/**/*.deb
+            artifacts/**/*.AppImage
+            artifacts/**/*.tar.gz
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
