@@ -2,7 +2,6 @@
 //!
 //! These commands are callable from the React frontend via `invoke()`.
 
-use serde::{Deserialize, Serialize};
 use std::time::Instant;
 
 // Re-export types from the scanner library
