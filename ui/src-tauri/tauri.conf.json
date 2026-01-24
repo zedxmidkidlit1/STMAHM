@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Network Topology Mapper",
+  "productName": "NetworkTopologyMapper",
   "identifier": "com.netmapper.app",
   "version": "0.1.0",
   "build": {

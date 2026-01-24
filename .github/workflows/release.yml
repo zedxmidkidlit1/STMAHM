@@ -70,6 +70,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           projectPath: ui
+          tauriScript: npm run tauri
           tagName: ${{ github.ref_name }}
           releaseName: 'Network Topology Mapper ${{ github.ref_name }}'
           releaseBody: |
