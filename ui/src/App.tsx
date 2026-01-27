@@ -1,19 +1,41 @@
 import { useState } from 'react';
-import { ThemeProvider } from './hooks/useTheme';
+import { ThemeProvider, useTheme } from './hooks/useTheme';
 import { ScanProvider, useScanContext, HostInfo } from './hooks/useScan';
+import { useSidebarCollapse } from './hooks/useSidebarCollapse';
+import { useKeyboardShortcuts, SHORTCUTS } from './hooks/useKeyboardShortcuts';
 import Sidebar from './components/layout/Sidebar';
+import Titlebar from './components/layout/Titlebar';
+import TopHeader from './components/layout/TopHeader';
 import Dashboard from './pages/Dashboard';
 import TopologyView from './pages/TopologyView';
 import DeviceList from './pages/DeviceList';
 import Settings from './pages/Settings';
+import ComponentDemo from './pages/ComponentDemo';
 import DeviceDetailModal from './components/devices/DeviceDetailModal';
+import WelcomeScreen, { useWelcomeScreen } from './components/common/WelcomeScreen';
+import ErrorBoundary from './components/common/ErrorBoundary';
+import { ToastProvider } from './components/common/Toast';
 
-type Page = 'dashboard' | 'topology' | 'devices' | 'settings';
+type Page = 'dashboard' | 'topology' | 'devices' | 'vulnerabilities' | 'alerts' | 'tools' | 'reports' | 'settings' | 'profile' | 'demo';
 
 function AppContent() {
   const [currentPage, setCurrentPage] = useState<Page>('dashboard');
   const [selectedDevice, setSelectedDevice] = useState<HostInfo | null>(null);
   const { scan, isScanning } = useScanContext();
+  const { isCollapsed, toggle: toggleSidebar } = useSidebarCollapse();
+  const { toggleTheme } = useTheme();
+  const { shouldShow: showWelcome, markAsShown } = useWelcomeScreen();
+
+  // Keyboard shortcuts
+  useKeyboardShortcuts([
+    { ...SHORTCUTS.DASHBOARD, handler: () => setCurrentPage('dashboard') },
+    { ...SHORTCUTS.TOPOLOGY, handler: () => setCurrentPage('topology') },
+    { ...SHORTCUTS.DEVICES, handler: () => setCurrentPage('devices') },
+    { ...SHORTCUTS.SETTINGS, handler: () => setCurrentPage('settings') },
+    { ...SHORTCUTS.SCAN, handler: () => !isScanning && scan() },
+    { ...SHORTCUTS.TOGGLE_SIDEBAR, handler: toggleSidebar },
+    { ...SHORTCUTS.TOGGLE_THEME, handler: toggleTheme },
+  ]);
 
   const handleDeviceSelect = (device: HostInfo) => {
     setSelectedDevice(device);
@@ -27,6 +49,11 @@ function AppContent() {
     scan();
   };
 
+  const handleSearch = (query: string) => {
+    // TODO: Implement global search functionality
+    console.log('Search query:', query);
+  };
+
   const renderPage = () => {
     switch (currentPage) {
       case 'dashboard':
@@ -37,25 +64,77 @@ function AppContent() {
         return <DeviceList onDeviceClick={handleDeviceSelect} />;
       case 'settings':
         return <Settings />;
+      case 'demo':
+        return <ComponentDemo />;
+      case 'vulnerabilities':
+        return (
+          <div className="p-8 text-center">
+            <h2 className="text-2xl font-bold text-text-primary mb-2">🛡️ Vulnerabilities</h2>
+            <p className="text-text-muted">Security vulnerability scanning - Coming soon</p>
+          </div>
+        );
+      case 'alerts':
+        return (
+          <div className="p-8 text-center">
+            <h2 className="text-2xl font-bold text-text-primary mb-2">🔔 Alerts</h2>
+            <p className="text-text-muted">Alert management - Coming soon</p>
+          </div>
+        );
+      case 'tools':
+        return (
+          <div className="p-8 text-center">
+            <h2 className="text-2xl font-bold text-text-primary mb-2">🛠️ Tools</h2>
+            <p className="text-text-muted">Network utilities - Coming soon</p>
+          </div>
+        );
+      case 'reports':
+        return (
+          <div className="p-8 text-center">
+            <h2 className="text-2xl font-bold text-text-primary mb-2">📈 Reports</h2>
+            <p className="text-text-muted">Network reports & analytics - Coming soon</p>
+          </div>
+        );
       default:
-        return <Dashboard onDeviceClick={handleDeviceSelect} />;
+        return <Dashboard onDeviceClick={handleDeviceSelect} onScan={handleScan} />;
     }
   };
 
   return (
-    <div className="flex h-screen bg-bg-primary">
+    <div className="flex h-screen overflow-hidden bg-bg-primary">
+      {/* Welcome Screen Overlay */}
+      {showWelcome && (
+        <WelcomeScreen
+          onStartScan={() => {
+            markAsShown();
+            scan();
+          }}
+          isScanning={isScanning}
+        />
+      )}
+
       {/* Sidebar */}
       <Sidebar 
         currentPage={currentPage} 
         onNavigate={setCurrentPage} 
         onScan={handleScan}
         isScanning={isScanning}
+        isCollapsed={isCollapsed}
+        onToggleCollapse={toggleSidebar}
       />
       
-      {/* Main Content */}
-      <main className="flex-1 overflow-auto">
-        {renderPage()}
-      </main>
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {/* Custom Titlebar (macOS/Windows controls) */}
+        <Titlebar />
+        
+        {/* Top Header (Search, Notifications, Theme) */}
+        <TopHeader onSearch={handleSearch} />
+        
+        {/* Page Content */}
+        <main className="flex-1 overflow-auto">
+          {renderPage()}
+        </main>
+      </div>
 
       {/* Device Detail Modal */}
       <DeviceDetailModal device={selectedDevice} onClose={handleCloseModal} />
@@ -65,11 +144,14 @@ function AppContent() {
 
 function App() {
   return (
-    <ThemeProvider>
-      <ScanProvider>
-        <AppContent />
-      </ScanProvider>
-    </ThemeProvider>
+    <ErrorBoundary>
+      <ThemeProvider>
+        <ScanProvider>
+          <ToastProvider />
+          <AppContent />
+        </ScanProvider>
+      </ThemeProvider>
+    </ErrorBoundary>
   );
 }
 

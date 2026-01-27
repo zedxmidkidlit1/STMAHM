@@ -27,9 +27,11 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     // Update document class and localStorage
+    console.log('[useTheme] Theme changed to:', theme);
     document.documentElement.classList.remove('dark', 'light');
     document.documentElement.classList.add(theme);
     localStorage.setItem('theme', theme);
+    console.log('[useTheme] HTML classes:', document.documentElement.className);
   }, [theme]);
 
   const toggleTheme = () => {
@@ -49,8 +51,12 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
 export function useTheme() {
   const context = useContext(ThemeContext);
-  if (context === undefined) {
-    throw new Error('useTheme must be used within a ThemeProvider');
+  if (!context) {
+    throw new Error('useTheme must be used within ThemeProvider');
   }
-  return context;
+  return {
+    theme: context.theme,
+    toggleTheme: context.toggleTheme,
+    setTheme: context.setTheme,
+  };
 }

@@ -18,3 +18,24 @@ pnet_datalink = "0.34"
 snmp2 = { version = "0.4", features = ["tokio"] }
 mac_oui = { version = "0.4", features = ["with-db"] }
 dns-lookup = "2.0"
+# Database
+rusqlite = { version = "0.38", features = ["bundled"] }
+chrono = { version = "0.4", features = ["serde"] }
+dirs = "5"
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json", "time"] }
+tracing-appender = "0.2"
+
+# Encryption (AES-256 for file encryption)
+aes-gcm = "0.10"
+machine-uid = "0.5"
+sha2 = "0.10"
+hex = "0.4"
+whoami = "1.5"
+base64 = "0.22"
+
+# Passive Discovery
+mdns-sd = "0.11"
+

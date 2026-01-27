@@ -4,8 +4,10 @@ mod arp;
 mod icmp;
 mod snmp;
 mod tcp;
+pub mod passive;
 
 pub use arp::active_arp_scan;
 pub use icmp::{icmp_scan, guess_os_from_ttl, IcmpResult};
 pub use snmp::{snmp_enrich, SnmpData, SnmpNeighbor};
 pub use tcp::tcp_probe_scan;
+pub use passive::{PassiveScanner, ArpMonitor, ArpEvent};

@@ -4,12 +4,20 @@ use anyhow::{Context, Result};
 use ipnetwork::Ipv4Network;
 use std::net::Ipv4Addr;
 
+use crate::config::MAX_SCAN_HOSTS;
 use crate::models::InterfaceInfo;
 
 /// Logs a message to stderr
 macro_rules! log_stderr {
     ($($arg:tt)*) => {
         eprintln!("[INFO] {}", format!($($arg)*));
+    };
+}
+
+/// Logs a warning to stderr
+macro_rules! log_warn {
+    ($($arg:tt)*) => {
+        eprintln!("[WARN] {}", format!($($arg)*));
     };
 }
 
@@ -29,6 +37,7 @@ pub fn is_local_subnet(target_ip: Ipv4Addr, local_interface: &InterfaceInfo) -> 
 }
 
 /// Calculates the subnet range and generates the list of target IPs
+/// Limits to MAX_SCAN_HOSTS to prevent scanning huge subnets
 pub fn calculate_subnet_ips(interface: &InterfaceInfo) -> Result<(Ipv4Network, Vec<Ipv4Addr>)> {
     let network = Ipv4Network::new(interface.ip, interface.prefix_len)
         .context("Failed to create network from interface IP and prefix")?;
@@ -37,10 +46,34 @@ pub fn calculate_subnet_ips(interface: &InterfaceInfo) -> Result<(Ipv4Network, V
         .context("Failed to create subnet network")?;
 
     // Exclude network and broadcast addresses
-    let ips: Vec<Ipv4Addr> = subnet
+    let all_ips: Vec<Ipv4Addr> = subnet
         .iter()
         .filter(|ip| !is_special_address(*ip, &subnet))
         .collect();
+
+    // Limit to MAX_SCAN_HOSTS for performance
+    let ips = if all_ips.len() > MAX_SCAN_HOSTS {
+        log_warn!(
+            "Subnet {} has {} hosts, limiting scan to {} hosts",
+            subnet,
+            all_ips.len(),
+            MAX_SCAN_HOSTS
+        );
+        // Take hosts around the local IP for better relevance
+        let local_octets = interface.ip.octets();
+        let local_last = local_octets[3] as usize;
+        
+        // Calculate start index to center around local IP
+        let start = if local_last > MAX_SCAN_HOSTS / 2 {
+            local_last.saturating_sub(MAX_SCAN_HOSTS / 2)
+        } else {
+            0
+        };
+        
+        all_ips.into_iter().skip(start).take(MAX_SCAN_HOSTS).collect()
+    } else {
+        all_ips
+    };
 
     log_stderr!(
         "Calculated subnet: {} with {} scannable hosts",
@@ -50,3 +83,7 @@ pub fn calculate_subnet_ips(interface: &InterfaceInfo) -> Result<(Ipv4Network, V
 
     Ok((subnet, ips))
 }
+
+#[cfg(test)]
+#[path = "subnet_tests.rs"]
+mod subnet_tests;

@@ -311,4 +311,102 @@ mod tests {
         assert_eq!(infer_device_type_from_hostname("DESKTOP-ABC123"), Some(DeviceType::Pc));
         assert_eq!(infer_device_type_from_hostname("web-server-01"), Some(DeviceType::Server));
     }
+    
+    #[test]
+    fn test_infer_device_type_router_from_vendor() {
+        assert_eq!(
+            infer_device_type_from_vendor("Cisco"),
+            Some(DeviceType::Router)
+        );
+        assert_eq!(
+            infer_device_type_from_vendor("TP-Link"),
+            Some(DeviceType::Router)
+        );
+    }
+    
+    #[test]
+    fn test_infer_device_type_mobile_from_vendor() {
+        assert_eq!(
+            infer_device_type_from_vendor("Apple"),
+            Some(DeviceType::Mobile)
+        );
+        assert_eq!(
+            infer_device_type_from_vendor("Samsung"),
+            Some(DeviceType::Mobile)
+        );
+    }
+    
+    #[test]
+    fn test_infer_device_type_printer_from_ports() {
+        assert_eq!(
+            infer_device_type_from_ports(&[631]),
+            Some(DeviceType::Printer)
+        );
+        assert_eq!(
+            infer_device_type_from_ports(&[9100]),
+            Some(DeviceType::Printer)
+        );
+    }
+    
+    #[test]
+    fn test_infer_device_type_server_from_ports() {
+        assert_eq!(
+            infer_device_type_from_ports(&[22, 80, 443]),
+            Some(DeviceType::Server)
+        );
+    }
+    
+    #[test]
+    fn test_infer_device_type_gateway_is_router() {        let result = infer_device_type(
+            None,
+            None,
+            &[],
+            true  // is_gateway
+        );
+        assert_eq!(result, DeviceType::Router);
+    }
+    
+    #[test]
+    fn test_calculate_risk_score_low() {
+        // Known mobile device, no suspicious ports
+        let score = calculate_risk_score(
+            DeviceType::Mobile,
+            &[443],  // HTTPS only
+            false
+        );
+        assert!(score < 20);
+    }
+    
+    #[test]
+    fn test_calculate_risk_score_high() {
+        // IoT device with suspicious ports
+        let score = calculate_risk_score(
+            DeviceType::IotDevice,
+            &[21, 23],  // FTP + Telnet
+            false
+        );
+        assert!(score > 50);
+    }
+    
+    #[test]
+    fn test_calculate_risk_score_unknown_device() {
+        let score = calculate_risk_score(
+            DeviceType::Unknown,
+            &[],
+            false
+        );
+        // Unknown devices should have some base risk
+        assert!(score >= 20);
+    }
+    
+    #[test]
+    fn test_calculate_risk_score_caps_at_100() {
+        // Even with many risky ports, should cap at 100
+        let score = calculate_risk_score(
+            DeviceType::IotDevice,
+            &[21, 23, 3389, 5900, 139, 445, 80, 8080],
+            true  // randomized MAC
+        );
+        assert_eq!(score, 100);
+    }
 }

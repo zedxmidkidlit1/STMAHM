@@ -35,17 +35,37 @@
     "windows": [
       {
         "title": "Network Topology Mapper",
-        "width": 1400,
-        "height": 900,
+        "width": 1200,
+        "height": 750,
         "minWidth": 1000,
         "minHeight": 700,
         "resizable": true,
-        "decorations": true,
-        "transparent": false
+        "center": true,
+        "decorations": false,
+        "transparent": false,
+        "hiddenTitle": true
       }
     ],
     "security": {
-      "csp": null
+      "csp": null,
+      "capabilities": [
+        {
+          "identifier": "main-window-capability",
+          "windows": ["main"],
+          "permissions": [
+            "core:window:allow-close",
+            "core:window:allow-minimize",
+            "core:window:allow-maximize",
+            "core:window:allow-unmaximize",
+            "core:window:allow-toggle-maximize",
+            "core:window:allow-is-maximized",
+            "core:window:allow-start-dragging",
+            "core:event:allow-listen",
+            "core:event:allow-emit",
+            "core:event:default"
+          ]
+        }
+      ]
     }
   },
   "plugins": {

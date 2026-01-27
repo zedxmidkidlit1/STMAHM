@@ -2,7 +2,10 @@
 //!
 //! These commands are callable from the React frontend via `invoke()`.
 
+use std::sync::Mutex;
 use std::time::Instant;
+use tokio::sync::Mutex as TokioMutex;
+use tauri::Emitter;
 
 // Re-export types from the scanner library
 use host_discovery::{
@@ -11,13 +14,47 @@ use host_discovery::{
     active_arp_scan, icmp_scan, tcp_probe_scan, dns_scan,
     lookup_vendor_info, infer_device_type, calculate_risk_score,
     guess_os_from_ttl,
+    // Database
+    Database, DeviceRecord, ScanRecord, NetworkStats, AlertRecord,
+    database::queries,
+    // Monitoring
+    BackgroundMonitor, MonitoringStatus, NetworkEvent,
 };
 
-/// Perform a network scan
+
+/// Application state holding database connection
+pub struct AppState {
+    pub db: Mutex<Database>,
+}
+
+impl AppState {
+    pub fn new() -> Result<Self, String> {
+        let db_path = Database::default_path();
+        let db = Database::new(db_path)
+            .map_err(|e| format!("Failed to initialize database: {}", e))?;
+        Ok(Self { db: Mutex::new(db) })
+    }
+}
+
+/// Monitoring state holding background monitor
+pub struct MonitorState {
+    pub monitor: TokioMutex<BackgroundMonitor>,
+}
+
+impl MonitorState {
+    pub fn new() -> Self {
+        Self {
+            monitor: TokioMutex::new(BackgroundMonitor::new()),
+        }
+    }
+}
+
+
+/// Perform a network scan and save to database
 /// 
 /// This calls the existing host-discovery scanner library.
 #[tauri::command]
-pub async fn scan_network() -> Result<ScanResult, String> {
+pub async fn scan_network(state: tauri::State<'_, AppState>) -> Result<ScanResult, String> {
     let start = Instant::now();
     
     // Find a valid network interface
@@ -155,7 +192,7 @@ pub async fn scan_network() -> Result<ScanResult, String> {
 
     let duration = start.elapsed().as_millis() as u64;
 
-    Ok(ScanResult {
+    let scan_result = ScanResult {
         interface_name: interface.name,
         local_ip: interface.ip.to_string(),
         local_mac: format!("{}", interface.mac),
@@ -166,7 +203,19 @@ pub async fn scan_network() -> Result<ScanResult, String> {
         total_hosts: active_hosts.len(),
         scan_duration_ms: duration,
         active_hosts,
-    })
+    };
+
+    // Save scan result to database
+    {
+        let db = state.db.lock().unwrap();
+        let conn = db.connection();
+        let conn = conn.lock().unwrap();
+        if let Err(e) = queries::insert_scan(&conn, &scan_result) {
+            eprintln!("[WARN] Failed to save scan to database: {}", e);
+        }
+    }
+
+    Ok(scan_result)
 }
 
 /// Get available network interfaces
@@ -177,3 +226,270 @@ pub fn get_interfaces() -> Result<Vec<String>, String> {
     
     Ok(vec![interface.name])
 }
+
+// =====================================================
+// Database Commands
+// =====================================================
+
+/// Get recent scan history
+#[tauri::command]
+pub fn get_scan_history(state: tauri::State<'_, AppState>, limit: Option<i32>) -> Result<Vec<ScanRecord>, String> {
+    let db = state.db.lock().unwrap();
+    let conn = db.connection();
+    let conn = conn.lock().unwrap();
+    
+    queries::get_recent_scans(&conn, limit.unwrap_or(20))
+        .map_err(|e| format!("Failed to get scan history: {}", e))
+}
+
+/// Get all known devices
+#[tauri::command]
+pub fn get_all_devices(state: tauri::State<'_, AppState>) -> Result<Vec<DeviceRecord>, String> {
+    let db = state.db.lock().unwrap();
+    let conn = db.connection();
+    let conn = conn.lock().unwrap();
+    
+    queries::get_all_devices(&conn)
+        .map_err(|e| format!("Failed to get devices: {}", e))
+}
+
+/// Get device by MAC address
+#[tauri::command]
+pub fn get_device_by_mac(state: tauri::State<'_, AppState>, mac: String) -> Result<Option<DeviceRecord>, String> {
+    let db = state.db.lock().unwrap();
+    let conn = db.connection();
+    let conn = conn.lock().unwrap();
+    
+    queries::get_device_by_mac(&conn, &mac)
+        .map_err(|e| format!("Failed to get device: {}", e))
+}
+
+/// Update device custom name
+#[tauri::command]
+pub fn update_device_name(state: tauri::State<'_, AppState>, mac: String, name: String) -> Result<(), String> {
+    let db = state.db.lock().unwrap();
+    let conn = db.connection();
+    let conn = conn.lock().unwrap();
+    
+    queries::update_device_name(&conn, &mac, &name)
+        .map_err(|e| format!("Failed to update device name: {}", e))
+}
+
+/// Get network statistics
+#[tauri::command]
+pub fn get_network_stats(state: tauri::State<'_, AppState>) -> Result<NetworkStats, String> {
+    let db = state.db.lock().unwrap();
+    let conn = db.connection();
+    let conn = conn.lock().unwrap();
+    
+    queries::get_network_stats(&conn)
+        .map_err(|e| format!("Failed to get network stats: {}", e))
+}
+
+/// Get unread alerts
+#[tauri::command]
+pub fn get_unread_alerts(state: tauri::State<'_, AppState>) -> Result<Vec<AlertRecord>, String> {
+    let db = state.db.lock().unwrap();
+    let conn = db.connection();
+    let conn = conn.lock().unwrap();
+    
+    queries::get_unread_alerts(&conn)
+        .map_err(|e| format!("Failed to get alerts: {}", e))
+}
+
+/// Mark alert as read
+#[tauri::command]
+pub fn mark_alert_read(state: tauri::State<'_, AppState>, alert_id: i64) -> Result<(), String> {
+    let db = state.db.lock().unwrap();
+    let conn = db.connection();
+    let conn = conn.lock().unwrap();
+    
+    queries::mark_alert_read(&conn, alert_id)
+        .map_err(|e| format!("Failed to mark alert read: {}", e))
+}
+
+/// Mark all alerts as read
+#[tauri::command]
+pub fn mark_all_alerts_read(state: tauri::State<'_, AppState>) -> Result<(), String> {
+    let db = state.db.lock().unwrap();
+    let conn = db.connection();
+    let conn = conn.lock().unwrap();
+    
+    queries::mark_all_alerts_read(&conn)
+        .map_err(|e| format!("Failed to mark alerts read: {}", e))
+}
+
+/// Get database path (for debugging)
+#[tauri::command]
+pub fn get_database_path(state: tauri::State<'_, AppState>) -> String {
+    let db = state.db.lock().unwrap();
+    db.path().to_string_lossy().to_string()
+}
+
+// =====================================================
+// Monitoring Commands
+// =====================================================
+
+/// Start background network monitoring
+#[tauri::command]
+pub async fn start_monitoring(
+    monitor_state: tauri::State<'_, MonitorState>,
+    app: tauri::AppHandle,
+    interval_seconds: Option<u64>,
+) -> Result<(), String> {
+    let monitor = monitor_state.monitor.lock().await;
+    
+    // Create callback that emits events to Tauri frontend
+    let app_handle = app.clone();
+    let callback = move |event: NetworkEvent| {
+        let _ = app_handle.emit("network-event", &event);
+    };
+    
+    monitor.start(callback, interval_seconds).await
+}
+
+/// Stop background network monitoring
+#[tauri::command]
+pub async fn stop_monitoring(
+    monitor_state: tauri::State<'_, MonitorState>,
+) -> Result<(), String> {
+    let monitor = monitor_state.monitor.lock().await;
+    monitor.stop();
+    Ok(())
+}
+
+/// Get current monitoring status
+#[tauri::command]
+pub async fn get_monitoring_status(
+    monitor_state: tauri::State<'_, MonitorState>,
+) -> Result<MonitoringStatus, String> {
+    let monitor = monitor_state.monitor.lock().await;
+    Ok(monitor.status().await)
+}
+
+// =====================================================
+// AI Insights Commands
+// =====================================================
+
+// Note: NetworkHealth, DeviceDistribution, SecurityReport are available for future AI insights
+#[allow(unused_imports)]
+use host_discovery::{NetworkHealth, DeviceDistribution, SecurityReport};
+
+/// Get network health score from current scan
+#[tauri::command]
+pub fn get_network_health(
+    state: tauri::State<'_, AppState>,
+) -> Result<serde_json::Value, String> {
+    let db = state.db.lock().unwrap();
+    let conn = db.connection();
+    let conn = conn.lock().unwrap();
+    
+    // Get recent device history to calculate health
+    let devices = queries::get_all_devices(&conn)
+        .map_err(|e| format!("Failed to get devices: {}", e))?;
+    
+    let device_count = devices.len();
+    
+    // Calculate security score (based on unknown devices and risk factors)
+    let unknown_count = devices.iter()
+        .filter(|d| d.device_type.as_deref() == Some("UNKNOWN"))
+        .count();
+    let unknown_ratio = if device_count > 0 { 
+        (unknown_count as f64 / device_count as f64) * 100.0 
+    } else { 0.0 };
+    let security_score = (100.0 - unknown_ratio * 2.0).max(0.0).min(100.0) as usize;
+    
+    // Calculate stability score (based on device consistency)
+    let has_vendor = devices.iter()
+        .filter(|d| d.vendor.is_some())
+        .count();
+    let vendor_ratio = if device_count > 0 { 
+        (has_vendor as f64 / device_count as f64) * 100.0 
+    } else { 0.0 };
+    let stability_score = vendor_ratio as usize;
+    
+    // Calculate compliance score (based on properly identified devices)
+    let properly_identified = devices.iter()
+        .filter(|d| d.device_type.is_some() && d.device_type.as_deref() != Some("UNKNOWN"))
+        .count();
+    let id_ratio = if device_count > 0 { 
+        (properly_identified as f64 / device_count as f64) * 100.0 
+    } else { 0.0 };
+    let compliance_score = id_ratio as usize;
+    
+    // Overall score (weighted average)
+    let score = if device_count == 0 { 
+        0 
+    } else { 
+        (security_score * 40 + stability_score * 30 + compliance_score * 30) / 100
+    };
+    
+    let grade = match score {
+        90..=100 => 'A',
+        80..=89 => 'B', 
+        70..=79 => 'C',
+        60..=69 => 'D',
+        _ => 'F',
+    };
+    
+    let status = match score {
+        80..=100 => "Excellent",
+        60..=79 => "Good",
+        40..=59 => "Fair",
+        _ => "Poor",
+    };
+    
+    // Generate insights
+    let mut insights = vec![
+        format!("{} devices tracked", device_count),
+    ];
+    
+    if unknown_count > 0 {
+        insights.push(format!("{} device(s) need identification", unknown_count));
+    }
+    
+    if security_score < 70 {
+        insights.push("Consider reviewing unidentified devices".to_string());
+    }
+    
+    if stability_score >= 80 {
+        insights.push("Good vendor identification coverage".to_string());
+    }
+    
+    Ok(serde_json::json!({
+        "score": score,
+        "grade": grade.to_string(),
+        "status": status,
+        "breakdown": {
+            "security": security_score,
+            "stability": stability_score,
+            "compliance": compliance_score
+        },
+        "insights": insights
+    }))
+}
+
+/// Get device distribution stats
+#[tauri::command]
+pub fn get_device_distribution(
+    state: tauri::State<'_, AppState>,
+) -> Result<serde_json::Value, String> {
+    let db = state.db.lock().unwrap();
+    let conn = db.connection();
+    let conn = conn.lock().unwrap();
+    
+    let devices = queries::get_all_devices(&conn)
+        .map_err(|e| format!("Failed to get devices: {}", e))?;
+    
+    let mut by_type: std::collections::HashMap<String, usize> = std::collections::HashMap::new();
+    for device in &devices {
+        let dtype = device.device_type.clone().unwrap_or_else(|| "UNKNOWN".to_string());
+        *by_type.entry(dtype).or_insert(0) += 1;
+    }
+    
+    Ok(serde_json::json!({
+        "total": devices.len(),
+        "by_type": by_type,
+    }))
+}
+

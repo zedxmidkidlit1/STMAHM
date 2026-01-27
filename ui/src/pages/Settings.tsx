@@ -1,11 +1,96 @@
-import { useState } from 'react';
-import { Save, RefreshCw } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Save, RefreshCw, Check, AlertCircle } from 'lucide-react';
+
+// Default settings
+const DEFAULT_SETTINGS = {
+  snmpEnabled: false,
+  snmpCommunity: 'public',
+  scanInterval: 60,
+  tcpPorts: '22,80,443,445,8080,3389',
+};
+
+// Storage key
+const SETTINGS_KEY = 'netmapper-settings';
+
+// Load settings from localStorage
+function loadSettings() {
+  try {
+    const saved = localStorage.getItem(SETTINGS_KEY);
+    if (saved) {
+      return { ...DEFAULT_SETTINGS, ...JSON.parse(saved) };
+    }
+  } catch (e) {
+    console.error('Failed to load settings:', e);
+  }
+  return DEFAULT_SETTINGS;
+}
+
+// Save settings to localStorage
+function saveSettingsToStorage(settings: typeof DEFAULT_SETTINGS) {
+  try {
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+    return true;
+  } catch (e) {
+    console.error('Failed to save settings:', e);
+    return false;
+  }
+}
 
 export default function Settings() {
-  const [snmpEnabled, setSnmpEnabled] = useState(false);
-  const [snmpCommunity, setSnmpCommunity] = useState('public');
-  const [scanInterval, setScanInterval] = useState(60);
-  const [tcpPorts, setTcpPorts] = useState('22,80,443,445,8080,3389');
+  const [snmpEnabled, setSnmpEnabled] = useState(DEFAULT_SETTINGS.snmpEnabled);
+  const [snmpCommunity, setSnmpCommunity] = useState(DEFAULT_SETTINGS.snmpCommunity);
+  const [scanInterval, setScanInterval] = useState(DEFAULT_SETTINGS.scanInterval);
+  const [tcpPorts, setTcpPorts] = useState(DEFAULT_SETTINGS.tcpPorts);
+  
+  // UI state
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const [hasChanges, setHasChanges] = useState(false);
+
+  // Load settings on mount
+  useEffect(() => {
+    const settings = loadSettings();
+    setSnmpEnabled(settings.snmpEnabled);
+    setSnmpCommunity(settings.snmpCommunity);
+    setScanInterval(settings.scanInterval);
+    setTcpPorts(settings.tcpPorts);
+  }, []);
+
+  // Track changes
+  useEffect(() => {
+    const current = { snmpEnabled, snmpCommunity, scanInterval, tcpPorts };
+    const saved = loadSettings();
+    const changed = JSON.stringify(current) !== JSON.stringify(saved);
+    setHasChanges(changed);
+  }, [snmpEnabled, snmpCommunity, scanInterval, tcpPorts]);
+
+  // Save settings
+  const handleSave = () => {
+    setSaveStatus('saving');
+    const settings = { snmpEnabled, snmpCommunity, scanInterval, tcpPorts };
+    
+    setTimeout(() => {
+      if (saveSettingsToStorage(settings)) {
+        setSaveStatus('saved');
+        setHasChanges(false);
+        setTimeout(() => setSaveStatus('idle'), 2000);
+      } else {
+        setSaveStatus('error');
+        setTimeout(() => setSaveStatus('idle'), 3000);
+      }
+    }, 300);
+  };
+
+  // Reset to defaults
+  const handleReset = () => {
+    setSnmpEnabled(DEFAULT_SETTINGS.snmpEnabled);
+    setSnmpCommunity(DEFAULT_SETTINGS.snmpCommunity);
+    setScanInterval(DEFAULT_SETTINGS.scanInterval);
+    setTcpPorts(DEFAULT_SETTINGS.tcpPorts);
+    saveSettingsToStorage(DEFAULT_SETTINGS);
+    setSaveStatus('saved');
+    setHasChanges(false);
+    setTimeout(() => setSaveStatus('idle'), 2000);
+  };
 
   return (
     <div className="p-8 max-w-3xl">
@@ -100,14 +185,45 @@ export default function Settings() {
 
       {/* Actions */}
       <div className="flex items-center gap-3">
-        <button className="flex items-center gap-2 px-6 py-3 bg-accent-blue hover:bg-accent-blue/80 text-white rounded-lg font-medium transition-colors">
-          <Save className="w-5 h-5" />
-          <span>Save Settings</span>
+        <button 
+          onClick={handleSave}
+          disabled={!hasChanges && saveStatus === 'idle'}
+          className={`flex items-center gap-2 px-6 py-3 rounded-lg font-medium transition-all ${
+            saveStatus === 'saved' 
+              ? 'bg-accent-green text-white'
+              : saveStatus === 'error'
+              ? 'bg-accent-red text-white'
+              : hasChanges
+              ? 'bg-accent-blue hover:bg-accent-blue/80 text-white'
+              : 'bg-accent-blue/50 text-white/70 cursor-not-allowed'
+          }`}
+        >
+          {saveStatus === 'saving' ? (
+            <RefreshCw className="w-5 h-5 animate-spin" />
+          ) : saveStatus === 'saved' ? (
+            <Check className="w-5 h-5" />
+          ) : saveStatus === 'error' ? (
+            <AlertCircle className="w-5 h-5" />
+          ) : (
+            <Save className="w-5 h-5" />
+          )}
+          <span>
+            {saveStatus === 'saving' ? 'Saving...' 
+              : saveStatus === 'saved' ? 'Saved!' 
+              : saveStatus === 'error' ? 'Error!' 
+              : 'Save Settings'}
+          </span>
         </button>
-        <button className="flex items-center gap-2 px-6 py-3 bg-bg-tertiary hover:bg-bg-hover text-text-secondary rounded-lg font-medium transition-colors">
+        <button 
+          onClick={handleReset}
+          className="flex items-center gap-2 px-6 py-3 bg-bg-tertiary hover:bg-bg-hover text-text-secondary rounded-lg font-medium transition-colors"
+        >
           <RefreshCw className="w-5 h-5" />
           <span>Reset to Defaults</span>
         </button>
+        {hasChanges && (
+          <span className="text-sm text-accent-amber">Unsaved changes</span>
+        )}
       </div>
     </div>
   );

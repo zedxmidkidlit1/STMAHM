@@ -1,0 +1,473 @@
+//! Database query functions
+//!
+//! CRUD operations for scans, devices, and alerts
+
+use anyhow::{Context, Result};
+use chrono::{DateTime, Utc};
+use rusqlite::{params, Connection};
+
+use super::models::*;
+use crate::models::{HostInfo, ScanResult};
+
+/// Insert a scan result into the database
+pub fn insert_scan(conn: &Connection, result: &ScanResult) -> Result<i64> {
+    conn.execute(
+        r#"
+        INSERT INTO scans (
+            interface_name, local_ip, local_mac, subnet, scan_method,
+            arp_discovered, icmp_discovered, total_hosts, duration_ms
+        ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)
+        "#,
+        params![
+            result.interface_name,
+            result.local_ip,
+            result.local_mac,
+            result.subnet,
+            result.scan_method,
+            result.arp_discovered as i32,
+            result.icmp_discovered as i32,
+            result.total_hosts as i32,
+            result.scan_duration_ms as i64,
+        ],
+    )
+    .context("Failed to insert scan")?;
+
+    let scan_id = conn.last_insert_rowid();
+
+    // Insert/update each discovered host
+    for host in &result.active_hosts {
+        upsert_device_from_host(conn, host, scan_id)?;
+    }
+
+    Ok(scan_id)
+}
+
+/// Insert or update a device from scan result
+fn upsert_device_from_host(conn: &Connection, host: &HostInfo, scan_id: i64) -> Result<i64> {
+    // Try to get existing device
+    let device_id: Option<i64> = conn
+        .query_row(
+            "SELECT id FROM devices WHERE mac = ?1",
+            params![&host.mac],
+            |row| row.get(0),
+        )
+        .ok();
+
+    let device_id = if let Some(id) = device_id {
+        // Update existing device
+        conn.execute(
+            r#"
+            UPDATE devices SET
+                last_seen = datetime('now'),
+                last_ip = ?2,
+                vendor = COALESCE(?3, vendor),
+                device_type = COALESCE(?4, device_type),
+                hostname = COALESCE(?5, hostname),
+                os_guess = COALESCE(?6, os_guess)
+            WHERE id = ?1
+            "#,
+            params![
+                id,
+                &host.ip,
+                &host.vendor,
+                &host.device_type,
+                &host.hostname,
+                &host.os_guess,
+            ],
+        )
+        .context("Failed to update device")?;
+        id
+    } else {
+        // Insert new device
+        conn.execute(
+            r#"
+            INSERT INTO devices (
+                mac, last_ip, vendor, device_type, hostname, os_guess
+            ) VALUES (?1, ?2, ?3, ?4, ?5, ?6)
+            "#,
+            params![
+                &host.mac,
+                &host.ip,
+                &host.vendor,
+                &host.device_type,
+                &host.hostname,
+                &host.os_guess,
+            ],
+        )
+        .context("Failed to insert device")?;
+        conn.last_insert_rowid()
+    };
+
+    // Insert device history for this scan
+    let open_ports_str = host
+        .open_ports
+        .iter()
+        .map(|p| p.to_string())
+        .collect::<Vec<_>>()
+        .join(",");
+
+    conn.execute(
+        r#"
+        INSERT INTO device_history (
+            scan_id, device_id, ip, response_time_ms, ttl, risk_score,
+            is_online, discovery_method, open_ports
+        ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)
+        "#,
+        params![
+            scan_id,
+            device_id,
+            &host.ip,
+            host.response_time_ms.map(|t| t as i64),
+            host.ttl.map(|t| t as i32),
+            host.risk_score as i32,
+            true,
+            &host.discovery_method,
+            open_ports_str,
+        ],
+    )
+    .context("Failed to insert device history")?;
+
+    Ok(device_id)
+}
+
+/// Get recent scans
+pub fn get_recent_scans(conn: &Connection, limit: i32) -> Result<Vec<ScanRecord>> {
+    let mut stmt = conn.prepare(
+        r#"
+        SELECT id, scan_time, interface_name, local_ip, local_mac, subnet,
+               scan_method, arp_discovered, icmp_discovered, total_hosts, duration_ms
+        FROM scans
+        ORDER BY scan_time DESC
+        LIMIT ?1
+        "#,
+    )?;
+
+    let scans = stmt
+        .query_map(params![limit], |row| {
+            Ok(ScanRecord {
+                id: row.get(0)?,
+                scan_time: parse_datetime(row.get::<_, String>(1)?),
+                interface_name: row.get(2)?,
+                local_ip: row.get(3)?,
+                local_mac: row.get(4)?,
+                subnet: row.get(5)?,
+                scan_method: row.get(6)?,
+                arp_discovered: row.get(7)?,
+                icmp_discovered: row.get(8)?,
+                total_hosts: row.get(9)?,
+                duration_ms: row.get(10)?,
+            })
+        })?
+        .filter_map(|r| r.ok())
+        .collect();
+
+    Ok(scans)
+}
+
+/// Get all devices
+pub fn get_all_devices(conn: &Connection) -> Result<Vec<DeviceRecord>> {
+    let mut stmt = conn.prepare(
+        r#"
+        SELECT id, mac, first_seen, last_seen, last_ip, vendor,
+               device_type, hostname, os_guess, custom_name, notes
+        FROM devices
+        ORDER BY last_seen DESC
+        "#,
+    )?;
+
+    let devices = stmt
+        .query_map([], |row| {
+            Ok(DeviceRecord {
+                id: row.get(0)?,
+                mac: row.get(1)?,
+                first_seen: parse_datetime(row.get::<_, String>(2)?),
+                last_seen: parse_datetime(row.get::<_, String>(3)?),
+                last_ip: row.get(4)?,
+                vendor: row.get(5)?,
+                device_type: row.get(6)?,
+                hostname: row.get(7)?,
+                os_guess: row.get(8)?,
+                custom_name: row.get(9)?,
+                notes: row.get(10)?,
+            })
+        })?
+        .filter_map(|r| r.ok())
+        .collect();
+
+    Ok(devices)
+}
+
+/// Get device by MAC address
+pub fn get_device_by_mac(conn: &Connection, mac: &str) -> Result<Option<DeviceRecord>> {
+    let result = conn.query_row(
+        r#"
+        SELECT id, mac, first_seen, last_seen, last_ip, vendor,
+               device_type, hostname, os_guess, custom_name, notes
+        FROM devices WHERE mac = ?1
+        "#,
+        params![mac],
+        |row| {
+            Ok(DeviceRecord {
+                id: row.get(0)?,
+                mac: row.get(1)?,
+                first_seen: parse_datetime(row.get::<_, String>(2)?),
+                last_seen: parse_datetime(row.get::<_, String>(3)?),
+                last_ip: row.get(4)?,
+                vendor: row.get(5)?,
+                device_type: row.get(6)?,
+                hostname: row.get(7)?,
+                os_guess: row.get(8)?,
+                custom_name: row.get(9)?,
+                notes: row.get(10)?,
+            })
+        },
+    );
+
+    match result {
+        Ok(device) => Ok(Some(device)),
+        Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
+        Err(e) => Err(e.into()),
+    }
+}
+
+/// Update device custom name
+pub fn update_device_name(conn: &Connection, mac: &str, custom_name: &str) -> Result<()> {
+    conn.execute(
+        "UPDATE devices SET custom_name = ?2 WHERE mac = ?1",
+        params![mac, custom_name],
+    )
+    .context("Failed to update device name")?;
+    Ok(())
+}
+
+/// Get device history for a specific device
+pub fn get_device_history(
+    conn: &Connection,
+    device_id: i64,
+    limit: i32,
+) -> Result<Vec<DeviceHistoryRecord>> {
+    let mut stmt = conn.prepare(
+        r#"
+        SELECT id, scan_id, device_id, ip, response_time_ms, ttl,
+               risk_score, is_online, discovery_method, open_ports
+        FROM device_history
+        WHERE device_id = ?1
+        ORDER BY id DESC
+        LIMIT ?2
+        "#,
+    )?;
+
+    let history = stmt
+        .query_map(params![device_id, limit], |row| {
+            let ports_str: String = row.get::<_, Option<String>>(9)?.unwrap_or_default();
+            let open_ports: Vec<u16> = ports_str
+                .split(',')
+                .filter_map(|s| s.parse().ok())
+                .collect();
+
+            Ok(DeviceHistoryRecord {
+                id: row.get(0)?,
+                scan_id: row.get(1)?,
+                device_id: row.get(2)?,
+                ip: row.get(3)?,
+                response_time_ms: row.get(4)?,
+                ttl: row.get(5)?,
+                risk_score: row.get(6)?,
+                is_online: row.get::<_, i32>(7)? == 1,
+                discovery_method: row.get(8)?,
+                open_ports,
+            })
+        })?
+        .filter_map(|r| r.ok())
+        .collect();
+
+    Ok(history)
+}
+
+/// Insert an alert
+pub fn insert_alert(
+    conn: &Connection,
+    alert_type: AlertType,
+    device_id: Option<i64>,
+    device_mac: Option<&str>,
+    device_ip: Option<&str>,
+    message: &str,
+    severity: AlertSeverity,
+) -> Result<i64> {
+    conn.execute(
+        r#"
+        INSERT INTO alerts (
+            alert_type, device_id, device_mac, device_ip, message, severity
+        ) VALUES (?1, ?2, ?3, ?4, ?5, ?6)
+        "#,
+        params![
+            alert_type.to_string(),
+            device_id,
+            device_mac,
+            device_ip,
+            message,
+            severity.to_string(),
+        ],
+    )
+    .context("Failed to insert alert")?;
+
+    Ok(conn.last_insert_rowid())
+}
+
+/// Get unread alerts
+pub fn get_unread_alerts(conn: &Connection) -> Result<Vec<AlertRecord>> {
+    let mut stmt = conn.prepare(
+        r#"
+        SELECT id, created_at, alert_type, device_id, device_mac, device_ip,
+               message, severity, is_read
+        FROM alerts
+        WHERE is_read = 0
+        ORDER BY created_at DESC
+        "#,
+    )?;
+
+    let alerts = stmt
+        .query_map([], |row| {
+            let alert_type_str: String = row.get(2)?;
+            let severity_str: String = row.get(7)?;
+
+            Ok(AlertRecord {
+                id: row.get(0)?,
+                created_at: parse_datetime(row.get::<_, String>(1)?),
+                alert_type: alert_type_str.parse().unwrap_or(AlertType::Custom),
+                device_id: row.get(3)?,
+                device_mac: row.get(4)?,
+                device_ip: row.get(5)?,
+                message: row.get(6)?,
+                severity: severity_str.parse().unwrap_or(AlertSeverity::Info),
+                is_read: row.get::<_, i32>(8)? == 1,
+            })
+        })?
+        .filter_map(|r| r.ok())
+        .collect();
+
+    Ok(alerts)
+}
+
+/// Mark alert as read
+pub fn mark_alert_read(conn: &Connection, alert_id: i64) -> Result<()> {
+    conn.execute("UPDATE alerts SET is_read = 1 WHERE id = ?1", params![alert_id])
+        .context("Failed to mark alert read")?;
+    Ok(())
+}
+
+/// Mark all alerts as read
+pub fn mark_all_alerts_read(conn: &Connection) -> Result<()> {
+    conn.execute("UPDATE alerts SET is_read = 1", [])
+        .context("Failed to mark all alerts read")?;
+    Ok(())
+}
+
+/// Get network statistics
+pub fn get_network_stats(conn: &Connection) -> Result<NetworkStats> {
+    let total_devices: i64 = conn.query_row("SELECT COUNT(*) FROM devices", [], |row| row.get(0))?;
+
+    // Devices seen in last scan (online)
+    let online_devices: i64 = conn.query_row(
+        r#"
+        SELECT COUNT(DISTINCT device_id) FROM device_history
+        WHERE scan_id = (SELECT MAX(id) FROM scans)
+        "#,
+        [],
+        |row| row.get(0),
+    ).unwrap_or(0);
+
+    let offline_devices = total_devices - online_devices;
+
+    // New devices in last 24 hours
+    let new_devices_24h: i64 = conn.query_row(
+        r#"
+        SELECT COUNT(*) FROM devices
+        WHERE first_seen >= datetime('now', '-24 hours')
+        "#,
+        [],
+        |row| row.get(0),
+    )?;
+
+    // High risk devices (risk_score > 70)
+    let high_risk_devices: i64 = conn.query_row(
+        r#"
+        SELECT COUNT(DISTINCT device_id) FROM device_history
+        WHERE scan_id = (SELECT MAX(id) FROM scans) AND risk_score > 70
+        "#,
+        [],
+        |row| row.get(0),
+    ).unwrap_or(0);
+
+    let total_scans: i64 = conn.query_row("SELECT COUNT(*) FROM scans", [], |row| row.get(0))?;
+
+    let last_scan_time: Option<DateTime<Utc>> = conn
+        .query_row(
+            "SELECT scan_time FROM scans ORDER BY id DESC LIMIT 1",
+            [],
+            |row| row.get::<_, String>(0),
+        )
+        .ok()
+        .map(parse_datetime);
+
+    Ok(NetworkStats {
+        total_devices,
+        online_devices,
+        offline_devices,
+        new_devices_24h,
+        high_risk_devices,
+        total_scans,
+        last_scan_time,
+    })
+}
+
+/// Helper: Parse SQLite datetime string to chrono DateTime
+fn parse_datetime(s: String) -> DateTime<Utc> {
+    DateTime::parse_from_str(&format!("{} +0000", s), "%Y-%m-%d %H:%M:%S %z")
+        .map(|dt| dt.with_timezone(&Utc))
+        .unwrap_or_else(|_| Utc::now())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::database::Database;
+
+    #[test]
+    fn test_insert_and_get_scan() {
+        let db = Database::in_memory().unwrap();
+        let conn = db.connection();
+        let conn = conn.lock().unwrap();
+
+        let result = ScanResult {
+            interface_name: "eth0".to_string(),
+            local_ip: "192.168.1.1".to_string(),
+            local_mac: "AA:BB:CC:DD:EE:FF".to_string(),
+            subnet: "192.168.1.0/24".to_string(),
+            scan_method: "arp+icmp".to_string(),
+            arp_discovered: 5,
+            icmp_discovered: 3,
+            total_hosts: 5,
+            scan_duration_ms: 1500,
+            active_hosts: vec![],
+        };
+
+        let scan_id = insert_scan(&conn, &result).unwrap();
+        assert!(scan_id > 0);
+
+        let scans = get_recent_scans(&conn, 10).unwrap();
+        assert_eq!(scans.len(), 1);
+        assert_eq!(scans[0].interface_name, "eth0");
+    }
+
+    #[test]
+    fn test_network_stats() {
+        let db = Database::in_memory().unwrap();
+        let conn = db.connection();
+        let conn = conn.lock().unwrap();
+
+        let stats = get_network_stats(&conn).unwrap();
+        assert_eq!(stats.total_devices, 0);
+        assert_eq!(stats.total_scans, 0);
+    }
+}
