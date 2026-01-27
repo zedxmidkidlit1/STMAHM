@@ -1,5 +1,4 @@
 import { forwardRef, ButtonHTMLAttributes } from 'react';
-import { motion } from 'framer-motion';
 import { Loader2 } from 'lucide-react';
 import clsx from 'clsx';
 
@@ -64,15 +63,11 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     ref
   ) => {
     const isDisabled = disabled || isLoading;
-    const MotionButton = motion.button;
 
     return (
-      <MotionButton
+      <button
         ref={ref}
         disabled={isDisabled}
-        whileHover={!isDisabled ? { scale: 1.02 } : undefined}
-        whileTap={!isDisabled ? { scale: 0.98 } : undefined}
-        transition={{ type: 'spring', stiffness: 400, damping: 25 }}
         className={clsx(
           // Base styles
           'inline-flex items-center justify-center gap-2',
@@ -80,6 +75,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
           'transition-all duration-200',
           'focus:outline-none focus:ring-2 focus:ring-accent-blue focus:ring-offset-2',
           'disabled:cursor-not-allowed disabled:opacity-50',
+          !isDisabled && 'active:scale-95 hover:scale-[1.02]',
           // Variant & size
           variantStyles[variant],
           sizeStyles[size],
@@ -101,7 +97,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
 
         {/* Right Icon */}
         {!isLoading && rightIcon && <span className="shrink-0">{rightIcon}</span>}
-      </MotionButton>
+      </button>
     );
   }
 );

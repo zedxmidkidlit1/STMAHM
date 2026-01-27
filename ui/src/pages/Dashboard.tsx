@@ -39,10 +39,10 @@ interface NetworkHealthData {
   insights: string[];
 }
 
-export default function Dashboard({ onDeviceClick, onScan }: DashboardProps) {
-  const { scanResult, isScanning, error, lastScanTime, tauriAvailable } = useScanContext();
-  const { stats, refetch: refetchStats } = useNetworkStats();
-  const { history, loading: historyLoading, refetch: refetchHistory } = useScanHistory(5);
+export default function Dashboard({ onDeviceClick }: DashboardProps) {
+  const { scanResult, isScanning, error, lastScanTime: _lastScanTime, tauriAvailable } = useScanContext();
+  const { stats: _stats, refetch: refetchStats } = useNetworkStats();
+  const { history: _history, refetch: refetchHistory } = useScanHistory(5);
   
   // Health score state
   const [healthData, setHealthData] = useState<NetworkHealthData | null>(null);

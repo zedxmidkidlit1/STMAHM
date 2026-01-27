@@ -19,11 +19,6 @@ export default function DeviceDetailModal({ device, onClose }: DeviceDetailModal
   
   // Risk level
   const riskLevel = device.risk_score >= 70 ? 'high' : device.risk_score >= 40 ? 'medium' : 'low';
-  const riskConfig = {
-    low: { bg: 'bg-accent-green/15', border: 'border-accent-green/30', text: 'text-accent-green', glow: '#10B981' },
-    medium: { bg: 'bg-accent-amber/15', border: 'border-accent-amber/30', text: 'text-accent-amber', glow: '#F59E0B' },
-    high: { bg: 'bg-accent-red/15', border: 'border-accent-red/30', text: 'text-accent-red', glow: '#EF4444' },
-  };
 
   const statusConfig = isOnline 
     ? { bg: 'bg-accent-green/15', border: 'border-accent-green/30', text: 'text-accent-green', icon: Wifi, glow: '#10B981' }
