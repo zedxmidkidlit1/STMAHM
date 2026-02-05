@@ -24,6 +24,20 @@ import { generateTopologyLayout } from '../lib/topology-layout';
 import { getMappingTheme } from '../lib/mapping-themes';
 import { useTheme } from '../hooks/useTheme';
 
+// Device type color mapping for MiniMap (moved outside component for performance)
+const DEVICE_TYPE_COLORS: Record<string, string> = {
+  ROUTER: '#3B82F6',
+  SWITCH: '#10B981',
+  ACCESS_POINT: '#8B5CF6',
+  FIREWALL: '#EF4444',
+  SERVER: '#F59E0B',
+  NAS: '#F59E0B',
+  LAPTOP: '#06B6D4',
+  PC: '#06B6D4',
+  MOBILE: '#EC4899',
+  PRINTER: '#6366F1',
+};
+
 
 
 interface TopologyViewProps {
@@ -63,7 +77,7 @@ export default function TopologyView({ onDeviceClick }: TopologyViewProps) {
   useEffect(() => {
     setNodes(initialNodes);
     setEdges(initialEdges);
-  }, [initialNodes, initialEdges, setNodes, setEdges]);
+  }, [initialNodes, initialEdges]); // setNodes and setEdges are stable
 
   // Handle node click
   const onNodeClick: NodeMouseHandler = useCallback((_event, node) => {
@@ -89,9 +103,13 @@ export default function TopologyView({ onDeviceClick }: TopologyViewProps) {
   }, []);
 
   // Get current theme configuration
-  const themeConfig = useMemo(() => getMappingTheme(mappingDesign, isDark), [mappingDesign, isDark, theme]);
+  const themeConfig = useMemo(() => getMappingTheme(mappingDesign, isDark), [mappingDesign, isDark]);
 
   // Dynamic node types based on theme
+  // Note: Using 'as any' because the three node components have slightly different prop signatures
+  // (some use NodeProps<any>, others use NodeProps without type param), creating a union type
+  // that doesn't strictly match ReactFlow's NodeTypes interface. This is safe since all components
+  // accept the same runtime props.
   const nodeTypes = useMemo(() => {
     const component = themeConfig.nodeComponent === 'cyber'
       ? CyberDeviceNode
@@ -99,7 +117,7 @@ export default function TopologyView({ onDeviceClick }: TopologyViewProps) {
       ? MeshDeviceNode
       : DeviceNode;
     
-    return { device: component };
+    return { device: component } as any;
   }, [themeConfig.nodeComponent]);
 
   // Theme-aware colors
@@ -284,20 +302,11 @@ export default function TopologyView({ onDeviceClick }: TopologyViewProps) {
                 : '0 4px 20px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(148, 163, 184, 0.1)',
             }}
             nodeColor={(node) => {
-              const deviceType = node.data?.deviceType as string;
-              const colors: Record<string, string> = {
-                ROUTER: '#3B82F6',
-                SWITCH: '#10B981',
-                ACCESS_POINT: '#8B5CF6',
-                FIREWALL: '#EF4444',
-                SERVER: '#F59E0B',
-                NAS: '#F59E0B',
-                LAPTOP: '#06B6D4',
-                PC: '#06B6D4',
-                MOBILE: '#EC4899',
-                PRINTER: '#6366F1',
-              };
-              return colors[deviceType] || '#94A3B8';
+              const deviceType = node.data?.deviceType;
+              if (!deviceType || typeof deviceType !== 'string') {
+                return '#94A3B8'; // Default gray for unknown/undefined types
+              }
+              return DEVICE_TYPE_COLORS[deviceType] || '#94A3B8';
             }}
             pannable
             zoomable
