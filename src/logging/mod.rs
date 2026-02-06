@@ -27,47 +27,42 @@ use tracing_subscriber::{fmt, layer::SubscriberExt, util::SubscriberInitExt, Env
 pub fn init_logging() -> Result<PathBuf, Box<dyn std::error::Error>> {
     // Get log directory path
     let log_dir = get_log_directory()?;
-    
+
     // Ensure log directory exists
     std::fs::create_dir_all(&log_dir)?;
-    
+
     // Create file appender with daily rotation
-    let file_appender = RollingFileAppender::new(
-        Rotation::DAILY,
-        &log_dir,
-        "netmapper.log"
-    );
-    
+    let file_appender = RollingFileAppender::new(Rotation::DAILY, &log_dir, "netmapper.log");
+
     // Create console layer (for stderr)
     let console_layer = fmt::layer()
         .with_target(false)
         .with_thread_ids(true)
         .with_line_number(true)
         .compact();
-    
+
     // Create file layer
     let file_layer = fmt::layer()
         .with_writer(file_appender)
-        .with_ansi(false)  // No ANSI colors in file
+        .with_ansi(false) // No ANSI colors in file
         .with_target(true)
         .with_thread_ids(true)
         .with_line_number(true)
         .with_file(true)
-        .json();  // JSON format for easier parsing
-    
+        .json(); // JSON format for easier parsing
+
     // Set up filter (default to INFO level unless RUST_LOG is set)
-    let filter = EnvFilter::try_from_default_env()
-        .or_else(|_| EnvFilter::try_new("info"))?;
-    
+    let filter = EnvFilter::try_from_default_env().or_else(|_| EnvFilter::try_new("info"))?;
+
     // Initialize subscriber with both layers
     tracing_subscriber::registry()
         .with(filter)
         .with(console_layer)
         .with(file_layer)
         .init();
-    
+
     tracing::info!("Logging initialized. Log directory: {}", log_dir.display());
-    
+
     Ok(log_dir)
 }
 
@@ -87,7 +82,7 @@ fn get_log_directory() -> Result<PathBuf, Box<dyn std::error::Error>> {
             .ok_or("Could not find config directory")?
             .join("netmapper")
     };
-    
+
     Ok(base_dir.join("logs"))
 }
 
@@ -101,7 +96,7 @@ pub fn get_current_log_file() -> Result<PathBuf, Box<dyn std::error::Error>> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_log_directory_exists() {
         let log_dir = get_log_directory().expect("Should get log directory");

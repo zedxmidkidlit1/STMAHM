@@ -12,13 +12,18 @@
   "bundle": {
     "active": true,
     "targets": "all",
-    "icon": ["icons/icon.png", "icons/icon.ico"],
+    "icon": [
+      "icons/icon.png",
+      "icons/icon.ico"
+    ],
     "windows": {
       "wix": {
         "language": "en-US"
       },
       "nsis": {
-        "languages": ["English"],
+        "languages": [
+          "English"
+        ],
         "displayLanguageSelector": false
       }
     },
@@ -47,11 +52,13 @@
       }
     ],
     "security": {
-      "csp": null,
+      "csp": "default-src 'self'; img-src 'self' data: blob: asset: https://asset.localhost; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self' ipc: http://ipc.localhost https://ipc.localhost; font-src 'self' data:",
       "capabilities": [
         {
           "identifier": "main-window-capability",
-          "windows": ["main"],
+          "windows": [
+            "main"
+          ],
           "permissions": [
             "core:window:allow-close",
             "core:window:allow-minimize",
@@ -69,10 +76,15 @@
             {
               "identifier": "fs:allow-write-file",
               "allow": [
-                { "path": "$DOWNLOAD/*" },
-                { "path": "$DESKTOP/*" },
-                { "path": "$DOCUMENT/*" },
-                { "path": "$HOME/*" }
+                {
+                  "path": "$DOWNLOAD/*"
+                },
+                {
+                  "path": "$DESKTOP/*"
+                },
+                {
+                  "path": "$DOCUMENT/*"
+                }
               ]
             }
           ]

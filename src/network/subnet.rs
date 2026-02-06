@@ -62,15 +62,19 @@ pub fn calculate_subnet_ips(interface: &InterfaceInfo) -> Result<(Ipv4Network, V
         // Take hosts around the local IP for better relevance
         let local_octets = interface.ip.octets();
         let local_last = local_octets[3] as usize;
-        
+
         // Calculate start index to center around local IP
         let start = if local_last > MAX_SCAN_HOSTS / 2 {
             local_last.saturating_sub(MAX_SCAN_HOSTS / 2)
         } else {
             0
         };
-        
-        all_ips.into_iter().skip(start).take(MAX_SCAN_HOSTS).collect()
+
+        all_ips
+            .into_iter()
+            .skip(start)
+            .take(MAX_SCAN_HOSTS)
+            .collect()
     } else {
         all_ips
     };

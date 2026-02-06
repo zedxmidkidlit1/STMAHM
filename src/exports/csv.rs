@@ -13,7 +13,7 @@ pub fn export_devices_csv(devices: &[DeviceRecord]) -> Result<String> {
     let mut writer = Writer::from_writer(vec![]);
 
     // Write header
-    writer.write_record(&[
+    writer.write_record([
         "IP Address",
         "MAC Address",
         "Hostname",
@@ -35,7 +35,7 @@ pub fn export_devices_csv(devices: &[DeviceRecord]) -> Result<String> {
             "Offline"
         };
 
-        writer.write_record(&[
+        writer.write_record([
             device.last_ip.as_deref().unwrap_or("N/A"),
             &device.mac,
             device.hostname.as_deref().unwrap_or("N/A"),
@@ -59,7 +59,7 @@ pub fn export_hosts_csv(hosts: &[HostInfo]) -> Result<String> {
     let mut writer = Writer::from_writer(vec![]);
 
     // Write header
-    writer.write_record(&[
+    writer.write_record([
         "IP Address",
         "MAC Address",
         "Hostname",
@@ -83,10 +83,10 @@ pub fn export_hosts_csv(hosts: &[HostInfo]) -> Result<String> {
 
         let latency = host
             .response_time_ms
-            .map(|l| format!("{}", l))
+            .map(|l| l.to_string())
             .unwrap_or_else(|| "N/A".to_string());
 
-        writer.write_record(&[
+        writer.write_record([
             &host.ip,
             &host.mac,
             host.hostname.as_deref().unwrap_or("N/A"),
@@ -122,25 +122,26 @@ mod tests {
 
     #[test]
     fn test_export_hosts_csv() {
-        let hosts = vec![
-            HostInfo {
-                ip: "192.168.1.1".to_string(),
-                mac: "aa:bb:cc:dd:ee:ff".to_string(),
-                hostname: Some("router".to_string()),
-                vendor: Some("TP-Link".to_string()),
-                device_type: "Router".to_string(),
-                os_guess: Some("Linux".to_string()),
-                risk_score: 15,
-                open_ports: vec![80, 443],
-                response_time_ms: Some(5),
-                is_randomized: false,
-                ttl: Some(64),
-                discovery_method: "ARP+ICMP+TCP".to_string(),
-                system_description: None,
-                uptime_seconds: None,
-                neighbors: vec![],
-            },
-        ];
+        let hosts = vec![HostInfo {
+            ip: "192.168.1.1".to_string(),
+            mac: "aa:bb:cc:dd:ee:ff".to_string(),
+            hostname: Some("router".to_string()),
+            vendor: Some("TP-Link".to_string()),
+            device_type: "Router".to_string(),
+            os_guess: Some("Linux".to_string()),
+            risk_score: 15,
+            open_ports: vec![80, 443],
+            response_time_ms: Some(5),
+            is_randomized: false,
+            ttl: Some(64),
+            discovery_method: "ARP+ICMP+TCP".to_string(),
+            system_description: None,
+            uptime_seconds: None,
+            neighbors: vec![],
+            vulnerabilities: vec![],
+            port_warnings: vec![],
+            security_grade: String::new(),
+        }];
 
         let csv = export_hosts_csv(&hosts).unwrap();
         assert!(csv.contains("192.168.1.1"));
