@@ -6,7 +6,7 @@ mod interface;
 mod subnet;
 mod vendor;
 
-pub use device::{infer_device_type, calculate_risk_score, DeviceType};
+pub use device::{calculate_risk_score, infer_device_type, DeviceType};
 pub use dns::dns_scan;
 pub use interface::{find_valid_interface, interface_score};
 pub use subnet::{calculate_subnet_ips, is_local_subnet, is_special_address};

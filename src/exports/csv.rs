@@ -13,7 +13,7 @@ pub fn export_devices_csv(devices: &[DeviceRecord]) -> Result<String> {
     let mut writer = Writer::from_writer(vec![]);
 
     // Write header
-    writer.write_record(&[
+    writer.write_record([
         "IP Address",
         "MAC Address",
         "Hostname",
@@ -35,7 +35,7 @@ pub fn export_devices_csv(devices: &[DeviceRecord]) -> Result<String> {
             "Offline"
         };
 
-        writer.write_record(&[
+        writer.write_record([
             device.last_ip.as_deref().unwrap_or("N/A"),
             &device.mac,
             device.hostname.as_deref().unwrap_or("N/A"),
@@ -59,7 +59,7 @@ pub fn export_hosts_csv(hosts: &[HostInfo]) -> Result<String> {
     let mut writer = Writer::from_writer(vec![]);
 
     // Write header
-    writer.write_record(&[
+    writer.write_record([
         "IP Address",
         "MAC Address",
         "Hostname",
@@ -83,10 +83,10 @@ pub fn export_hosts_csv(hosts: &[HostInfo]) -> Result<String> {
 
         let latency = host
             .response_time_ms
-            .map(|l| format!("{}", l))
+            .map(|l| l.to_string())
             .unwrap_or_else(|| "N/A".to_string());
 
-        writer.write_record(&[
+        writer.write_record([
             &host.ip,
             &host.mac,
             host.hostname.as_deref().unwrap_or("N/A"),

@@ -4,27 +4,20 @@
 
 use std::collections::HashMap;
 
-use super::types::{Alert, AlertType, AlertSeverity, HIGH_RISK_THRESHOLD, SUSPICIOUS_PORTS};
-use crate::HostInfo;
+use super::types::{Alert, AlertSeverity, AlertType, HIGH_RISK_THRESHOLD, SUSPICIOUS_PORTS};
 use crate::database::DeviceRecord;
+use crate::HostInfo;
 
 /// Detect alerts by comparing current scan with known devices
-pub fn detect_alerts(
-    known_devices: &[DeviceRecord],
-    current_hosts: &[HostInfo],
-) -> Vec<Alert> {
+pub fn detect_alerts(known_devices: &[DeviceRecord], current_hosts: &[HostInfo]) -> Vec<Alert> {
     let mut alerts = Vec::new();
 
     // Build lookup maps
-    let known_macs: HashMap<&str, &DeviceRecord> = known_devices
-        .iter()
-        .map(|d| (d.mac.as_str(), d))
-        .collect();
+    let known_macs: HashMap<&str, &DeviceRecord> =
+        known_devices.iter().map(|d| (d.mac.as_str(), d)).collect();
 
-    let current_macs: HashMap<&str, &HostInfo> = current_hosts
-        .iter()
-        .map(|h| (h.mac.as_str(), h))
-        .collect();
+    let current_macs: HashMap<&str, &HostInfo> =
+        current_hosts.iter().map(|h| (h.mac.as_str(), h)).collect();
 
     // Check for new devices
     for host in current_hosts {
@@ -119,14 +112,18 @@ pub fn detect_alerts(
 
 /// Quick check if any alerts are high priority
 pub fn has_high_priority_alerts(alerts: &[Alert]) -> bool {
-    alerts.iter().any(|a| matches!(a.severity, AlertSeverity::High | AlertSeverity::Critical))
+    alerts
+        .iter()
+        .any(|a| matches!(a.severity, AlertSeverity::High | AlertSeverity::Critical))
 }
 
 /// Count alerts by type
 pub fn count_alerts_by_type(alerts: &[Alert]) -> HashMap<String, usize> {
     let mut counts = HashMap::new();
     for alert in alerts {
-        *counts.entry(alert.alert_type.as_str().to_string()).or_insert(0) += 1;
+        *counts
+            .entry(alert.alert_type.as_str().to_string())
+            .or_insert(0) += 1;
     }
     counts
 }

@@ -42,7 +42,6 @@ async fn scan_network(interface: &InterfaceInfo) -> Result<ScanResult> {
     let arp_hosts = tokio::task::spawn_blocking({
         let interface = interface.clone();
         let ips = ips.clone();
-        let subnet = subnet.clone();
         move || active_arp_scan(&interface, &ips, &subnet)
     })
     .await

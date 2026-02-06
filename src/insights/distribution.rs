@@ -2,9 +2,9 @@
 //!
 //! Analyzes device type breakdown for insights
 
+use crate::HostInfo;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use crate::HostInfo;
 
 /// Device distribution statistics
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -25,7 +25,7 @@ impl DeviceDistribution {
     /// Calculate distribution from scan results
     pub fn calculate(hosts: &[HostInfo]) -> Self {
         let total = hosts.len();
-        
+
         if total == 0 {
             return Self::empty();
         }
@@ -117,9 +117,7 @@ impl VendorDistribution {
         }
 
         // Get top 5 vendors
-        let mut top_vendors: Vec<_> = by_vendor.iter()
-            .map(|(k, v)| (k.clone(), *v))
-            .collect();
+        let mut top_vendors: Vec<_> = by_vendor.iter().map(|(k, v)| (k.clone(), *v)).collect();
         top_vendors.sort_by(|a, b| b.1.cmp(&a.1));
         top_vendors.truncate(5);
 

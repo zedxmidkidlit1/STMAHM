@@ -19,21 +19,17 @@ macro_rules! log_stderr {
 /// Probes a single host for open ports
 async fn probe_host_ports(ip: Ipv4Addr) -> Vec<u16> {
     let mut open_ports = Vec::new();
-    
+
     for &port in TCP_PROBE_PORTS {
         let addr = std::net::SocketAddr::new(std::net::IpAddr::V4(ip), port);
-        
-        match tokio::time::timeout(
-            TCP_PROBE_TIMEOUT,
-            tokio::net::TcpStream::connect(addr)
-        ).await {
-            Ok(Ok(_)) => {
-                open_ports.push(port);
-            }
-            _ => {}
+
+        if let Ok(Ok(_)) =
+            tokio::time::timeout(TCP_PROBE_TIMEOUT, tokio::net::TcpStream::connect(addr)).await
+        {
+            open_ports.push(port);
         }
     }
-    
+
     open_ports
 }
 
@@ -59,7 +55,7 @@ pub async fn tcp_probe_scan(
 
         let handle = tokio::spawn(async move {
             let _permit = semaphore.acquire().await.expect("Semaphore closed");
-            
+
             let open_ports = probe_host_ports(ip).await;
             if !open_ports.is_empty() {
                 let mut results = port_results.lock().await;
@@ -77,7 +73,7 @@ pub async fn tcp_probe_scan(
     let results = port_results.lock().await;
     let hosts_with_ports = results.len();
     let total_ports: usize = results.values().map(|v| v.len()).sum();
-    
+
     log_stderr!(
         "Phase 3 complete: {} hosts with open ports ({} ports total)",
         hosts_with_ports,

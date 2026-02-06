@@ -3,12 +3,12 @@
 //! Resolves IP addresses to hostnames using reverse DNS queries.
 
 use dns_lookup::lookup_addr;
-use std::net::{IpAddr, Ipv4Addr};
-use std::time::Duration;
-use tokio::sync::Semaphore;
-use std::sync::Arc;
-use tokio::sync::Mutex;
 use std::collections::HashMap;
+use std::net::{IpAddr, Ipv4Addr};
+use std::sync::Arc;
+use std::time::Duration;
+use tokio::sync::Mutex;
+use tokio::sync::Semaphore;
 
 /// Maximum concurrent DNS lookups
 const MAX_CONCURRENT_DNS: usize = 10;
@@ -62,8 +62,9 @@ pub async fn dns_scan(ips: &[Ipv4Addr]) -> HashMap<Ipv4Addr, String> {
             // Run DNS lookup in blocking thread with timeout
             let lookup_result = tokio::time::timeout(
                 Duration::from_millis(DNS_TIMEOUT_MS),
-                tokio::task::spawn_blocking(move || reverse_lookup(ip))
-            ).await;
+                tokio::task::spawn_blocking(move || reverse_lookup(ip)),
+            )
+            .await;
 
             if let Ok(Ok(Some(hostname))) = lookup_result {
                 let mut res = results.lock().await;
