@@ -1,10 +1,7 @@
 //! Test the alerts detection system
 
 use chrono::Utc;
-use host_discovery::{
-    detect_alerts, has_high_priority_alerts,
-    HostInfo, database::DeviceRecord,
-};
+use host_discovery::{database::DeviceRecord, detect_alerts, has_high_priority_alerts, HostInfo};
 
 fn main() {
     println!("=== Alerts System Test ===\n");
@@ -25,6 +22,7 @@ fn main() {
             os_guess: None,
             custom_name: None,
             notes: None,
+            security_grade: None,
         },
         DeviceRecord {
             id: 2,
@@ -38,6 +36,7 @@ fn main() {
             os_guess: None,
             custom_name: None,
             notes: None,
+            security_grade: None,
         },
     ];
 
@@ -60,6 +59,9 @@ fn main() {
             system_description: None,
             uptime_seconds: None,
             neighbors: vec![],
+            vulnerabilities: vec![],
+            port_warnings: vec![],
+            security_grade: String::new(),
         },
         // NEW device (new device alert)
         HostInfo {
@@ -71,25 +73,36 @@ fn main() {
             ttl: Some(64),
             os_guess: None,
             device_type: "UNKNOWN".to_string(),
-            risk_score: 60, // High risk!
+            risk_score: 60,                 // High risk!
             open_ports: vec![22, 23, 3389], // Has Telnet and RDP!
             discovery_method: "ARP".to_string(),
             hostname: None,
             system_description: None,
             uptime_seconds: None,
             neighbors: vec![],
+            vulnerabilities: vec![],
+            port_warnings: vec![],
+            security_grade: String::new(),
         },
     ];
     // Note: Device 2 (galaxy) is NOT in current scan - it went offline
 
     println!("Known devices: {}", known_devices.len());
     for d in &known_devices {
-        println!("  - {} ({}) - Last IP: {:?}", d.mac, d.hostname.as_deref().unwrap_or("?"), d.last_ip);
+        println!(
+            "  - {} ({}) - Last IP: {:?}",
+            d.mac,
+            d.hostname.as_deref().unwrap_or("?"),
+            d.last_ip
+        );
     }
 
     println!("\nCurrent scan hosts: {}", current_hosts.len());
     for h in &current_hosts {
-        println!("  - {} ({}) - Risk: {}, Ports: {:?}", h.ip, h.mac, h.risk_score, h.open_ports);
+        println!(
+            "  - {} ({}) - Risk: {}, Ports: {:?}",
+            h.ip, h.mac, h.risk_score, h.open_ports
+        );
     }
 
     // Run alert detection
@@ -107,7 +120,7 @@ fn main() {
             "IP_CHANGED" => "🔄",
             _ => "📌",
         };
-        
+
         println!("{} [{}] {}", icon, alert.severity.as_str(), alert.message);
         if let (Some(mac), Some(ip)) = (&alert.device_mac, &alert.device_ip) {
             println!("   Device: {} ({})", mac, ip);
