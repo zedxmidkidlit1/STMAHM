@@ -12,9 +12,8 @@ use tokio::sync::Mutex;
 use super::events::{DeviceSnapshot, MonitoringStatus, NetworkEvent};
 use crate::config::{DEFAULT_MONITOR_INTERVAL, MAX_MONITOR_INTERVAL, MIN_MONITOR_INTERVAL};
 use crate::{
-    find_valid_interface, calculate_subnet_ips,
-    active_arp_scan, icmp_scan, tcp_probe_scan, dns_scan,
-    lookup_vendor_info, infer_device_type,
+    active_arp_scan, calculate_subnet_ips, dns_scan, find_valid_interface, icmp_scan,
+    infer_device_type, lookup_vendor_info, tcp_probe_scan,
 };
 
 /// Event callback type
@@ -76,7 +75,10 @@ impl BackgroundMonitor {
 
         // Spawn background scanning task
         tokio::spawn(async move {
-            eprintln!("[MONITOR] Background monitoring started (interval: {}s)", interval_secs);
+            eprintln!(
+                "[MONITOR] Background monitoring started (interval: {}s)",
+                interval_secs
+            );
 
             while is_running.load(Ordering::SeqCst) {
                 let current_scan = scan_count.fetch_add(1, Ordering::SeqCst) + 1;
@@ -101,7 +103,7 @@ impl BackgroundMonitor {
                         // Detect changes
                         let mut prev = previous_devices.lock().await;
                         detect_and_emit_changes(&*cb, &prev, &devices);
-                        
+
                         // Update previous devices
                         *prev = devices.iter().map(|d| (d.mac.clone(), d.clone())).collect();
 
@@ -112,14 +114,16 @@ impl BackgroundMonitor {
                             duration_ms: duration,
                         });
 
-                        eprintln!("[MONITOR] Scan #{} complete: {} hosts in {}ms", 
-                            current_scan, devices.len(), duration);
+                        eprintln!(
+                            "[MONITOR] Scan #{} complete: {} hosts in {}ms",
+                            current_scan,
+                            devices.len(),
+                            duration
+                        );
                     }
                     Err(e) => {
                         eprintln!("[MONITOR] Scan #{} failed: {}", current_scan, e);
-                        (*cb)(NetworkEvent::MonitoringError {
-                            message: e,
-                        });
+                        (*cb)(NetworkEvent::MonitoringError { message: e });
                     }
                 }
 
@@ -183,11 +187,10 @@ where
         message: "Finding network interface...".to_string(),
     });
 
-    let interface = find_valid_interface()
-        .map_err(|e| format!("Interface error: {}", e))?;
+    let interface = find_valid_interface().map_err(|e| format!("Interface error: {}", e))?;
 
-    let (subnet, ips) = calculate_subnet_ips(&interface)
-        .map_err(|e| format!("Subnet error: {}", e))?;
+    let (subnet, ips) =
+        calculate_subnet_ips(&interface).map_err(|e| format!("Subnet error: {}", e))?;
 
     // Emit progress: ARP scan
     callback(NetworkEvent::ScanProgress {
@@ -199,7 +202,7 @@ where
     let arp_hosts = {
         let interface_clone = interface.clone();
         let ips_clone = ips.clone();
-        let subnet_clone = subnet.clone();
+        let subnet_clone = subnet;
 
         tokio::task::spawn_blocking(move || {
             active_arp_scan(&interface_clone, &ips_clone, &subnet_clone)
@@ -216,10 +219,8 @@ where
         message: format!("ICMP scanning {} hosts...", arp_hosts.len()),
     });
 
-    let (response_times, port_results) = tokio::join!(
-        icmp_scan(&arp_hosts),
-        tcp_probe_scan(&arp_hosts)
-    );
+    let (response_times, port_results) =
+        tokio::join!(icmp_scan(&arp_hosts), tcp_probe_scan(&arp_hosts));
 
     let _response_times = response_times.unwrap_or_default();
     let port_results = port_results.unwrap_or_default();
@@ -254,7 +255,7 @@ where
             let vendor_info = lookup_vendor_info(&mac_str);
             let open_ports = port_results.get(ip).cloned().unwrap_or_default();
             let is_gateway = ip.octets()[3] == 1 || open_ports.contains(&80);
-            
+
             let device_type = infer_device_type(
                 vendor_info.vendor.as_deref(),
                 dns_hostnames.get(ip).map(|s| s.as_str()),
@@ -280,11 +281,10 @@ fn detect_and_emit_changes<F>(
     callback: &F,
     previous: &HashMap<String, DeviceSnapshot>,
     current: &[DeviceSnapshot],
-)
-where
+) where
     F: Fn(NetworkEvent),
 {
-    let current_macs: HashMap<String, &DeviceSnapshot> = 
+    let current_macs: HashMap<String, &DeviceSnapshot> =
         current.iter().map(|d| (d.mac.clone(), d)).collect();
 
     // Check for new devices
@@ -316,7 +316,10 @@ where
     for device in current {
         if let Some(prev_device) = previous.get(&device.mac) {
             if prev_device.ip != device.ip {
-                eprintln!("[MONITOR] IP changed: {} -> {} ({})", prev_device.ip, device.ip, device.mac);
+                eprintln!(
+                    "[MONITOR] IP changed: {} -> {} ({})",
+                    prev_device.ip, device.ip, device.mac
+                );
                 callback(NetworkEvent::DeviceIpChanged {
                     mac: device.mac.clone(),
                     old_ip: prev_device.ip.clone(),

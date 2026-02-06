@@ -1,8 +1,7 @@
 //! Test the AI insights system
 
 use host_discovery::{
-    NetworkHealth, DeviceDistribution, VendorDistribution, SecurityReport,
-    HostInfo,
+    DeviceDistribution, HostInfo, NetworkHealth, SecurityReport, VendorDistribution,
 };
 
 fn main() {
@@ -26,6 +25,9 @@ fn main() {
             system_description: None,
             uptime_seconds: None,
             neighbors: vec![],
+            vulnerabilities: vec![],
+            port_warnings: vec![],
+            security_grade: String::new(),
         },
         HostInfo {
             ip: "192.168.1.100".to_string(),
@@ -43,6 +45,9 @@ fn main() {
             system_description: None,
             uptime_seconds: None,
             neighbors: vec![],
+            vulnerabilities: vec![],
+            port_warnings: vec![],
+            security_grade: String::new(),
         },
         HostInfo {
             ip: "192.168.1.101".to_string(),
@@ -53,13 +58,16 @@ fn main() {
             ttl: Some(64),
             os_guess: None,
             device_type: "UNKNOWN".to_string(),
-            risk_score: 55, // High risk!
+            risk_score: 55,             // High risk!
             open_ports: vec![23, 3389], // Telnet + RDP
             discovery_method: "ARP".to_string(),
             hostname: None,
             system_description: None,
             uptime_seconds: None,
             neighbors: vec![],
+            vulnerabilities: vec![],
+            port_warnings: vec![],
+            security_grade: String::new(),
         },
         HostInfo {
             ip: "192.168.1.102".to_string(),
@@ -77,6 +85,9 @@ fn main() {
             system_description: None,
             uptime_seconds: None,
             neighbors: vec![],
+            vulnerabilities: vec![],
+            port_warnings: vec![],
+            security_grade: String::new(),
         },
     ];
 
@@ -116,11 +127,18 @@ fn main() {
     println!("\n━━━ Security Report ━━━");
     let report = SecurityReport::generate(&hosts);
     println!("Summary: {}", report.summary);
-    println!("Critical: {} | High: {} | Total: {}", 
-        report.critical_count, report.high_count, report.total_issues);
+    println!(
+        "Critical: {} | High: {} | Total: {}",
+        report.critical_count, report.high_count, report.total_issues
+    );
     println!("\nRecommendations:");
     for rec in &report.recommendations {
-        println!("\n[{}] {} - {}", rec.priority.as_str(), rec.category, rec.title);
+        println!(
+            "\n[{}] {} - {}",
+            rec.priority.as_str(),
+            rec.category,
+            rec.title
+        );
         println!("  {}", rec.description);
         if !rec.affected_devices.is_empty() {
             println!("  Affected: {:?}", rec.affected_devices);

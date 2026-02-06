@@ -18,7 +18,6 @@ pub const DEFAULT_PREFIX_LEN: u8 = 24;
 /// Set to 254 for typical /24 subnet, or 512 for /23
 pub const MAX_SCAN_HOSTS: usize = 254;
 
-
 // ====== ARP Adaptive Scan Configuration ======
 
 /// Maximum total wait time for ARP replies (ms) - reduced
@@ -64,4 +63,3 @@ pub const MIN_MONITOR_INTERVAL: u64 = 10;
 
 /// Maximum monitoring interval in seconds
 pub const MAX_MONITOR_INTERVAL: u64 = 3600;
-

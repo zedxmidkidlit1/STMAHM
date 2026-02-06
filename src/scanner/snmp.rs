@@ -114,9 +114,7 @@ async fn query_host_snmp(ip: Ipv4Addr) -> Option<SnmpData> {
     }
 
     // Only return if we got at least some data
-    if data.hostname.is_some()
-        || data.system_description.is_some()
-        || data.uptime_seconds.is_some()
+    if data.hostname.is_some() || data.system_description.is_some() || data.uptime_seconds.is_some()
     {
         Some(data)
     } else {

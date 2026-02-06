@@ -45,7 +45,7 @@ fn main() {
         eprintln!("[build.rs] Please install Npcap SDK and set LIB environment variable.");
         eprintln!("[build.rs] Download from: https://npcap.com/#download");
         eprintln!("[build.rs] Trying default paths anyway...");
-        
+
         // Add default path even if not found (might work if SDK is installed elsewhere)
         println!("cargo:rustc-link-search=native=C:\\npcap-sdk\\Lib\\x64");
     }

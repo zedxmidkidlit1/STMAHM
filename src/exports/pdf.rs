@@ -45,7 +45,7 @@ pub fn generate_scan_report_pdf(
     // Date
     let scan_date = Utc::now().format("%Y-%m-%d %H:%M:%S UTC").to_string();
     current_layer.use_text(
-        &format!("Generated: {}", scan_date),
+        format!("Generated: {}", scan_date),
         FONT_SIZE_BODY,
         Mm(20.0),
         Mm(y_pos),
@@ -55,7 +55,7 @@ pub fn generate_scan_report_pdf(
 
     // Scan details
     current_layer.use_text(
-        &format!("Scanned Subnet: {}", scan.subnet),
+        format!("Scanned Subnet: {}", scan.subnet),
         FONT_SIZE_BODY,
         Mm(20.0),
         Mm(y_pos),
@@ -64,7 +64,7 @@ pub fn generate_scan_report_pdf(
     y_pos -= 7.0;
 
     current_layer.use_text(
-        &format!("Total Devices Found: {}", scan.active_hosts.len()),
+        format!("Total Devices Found: {}", scan.active_hosts.len()),
         FONT_SIZE_BODY,
         Mm(20.0),
         Mm(y_pos),
@@ -73,7 +73,10 @@ pub fn generate_scan_report_pdf(
     y_pos -= 7.0;
 
     current_layer.use_text(
-        &format!("Scan Duration: {:.2}s", scan.scan_duration_ms as f64 / 1000.0),
+        format!(
+            "Scan Duration: {:.2}s",
+            scan.scan_duration_ms as f64 / 1000.0
+        ),
         FONT_SIZE_BODY,
         Mm(20.0),
         Mm(y_pos),
@@ -91,7 +94,7 @@ pub fn generate_scan_report_pdf(
         .count();
 
     current_layer.use_text(
-        &format!("• High-risk devices: {}", high_risk_count),
+        format!("• High-risk devices: {}", high_risk_count),
         FONT_SIZE_BODY,
         Mm(20.0),
         Mm(y_pos),
@@ -100,7 +103,7 @@ pub fn generate_scan_report_pdf(
     y_pos -= 7.0;
 
     current_layer.use_text(
-        &format!("• Low-latency devices: {}", low_latency_count),
+        format!("• Low-latency devices: {}", low_latency_count),
         FONT_SIZE_BODY,
         Mm(20.0),
         Mm(y_pos),
@@ -110,7 +113,7 @@ pub fn generate_scan_report_pdf(
 
     if let Some(stats) = stats {
         current_layer.use_text(
-            &format!("• Total known devices: {}", stats.total_devices),
+            format!("• Total known devices: {}", stats.total_devices),
             FONT_SIZE_BODY,
             Mm(20.0),
             Mm(y_pos),
@@ -119,7 +122,7 @@ pub fn generate_scan_report_pdf(
         y_pos -= 7.0;
 
         current_layer.use_text(
-            &format!("• New devices detected: {}", stats.new_devices_24h),
+            format!("• New devices detected: {}", stats.new_devices_24h),
             FONT_SIZE_BODY,
             Mm(20.0),
             Mm(y_pos),
@@ -174,7 +177,13 @@ pub fn generate_scan_report_pdf(
             break;
         }
 
-        current_layer.use_text(&device.ip, FONT_SIZE_BODY, Mm(col1_x), Mm(y_pos), &font);
+        current_layer.use_text(
+            device.ip.to_string(),
+            FONT_SIZE_BODY,
+            Mm(col1_x),
+            Mm(y_pos),
+            &font,
+        );
 
         let hostname = device.hostname.as_deref().unwrap_or("N/A");
         current_layer.use_text(hostname, FONT_SIZE_BODY, Mm(col2_x), Mm(y_pos), &font);
@@ -188,7 +197,7 @@ pub fn generate_scan_report_pdf(
         );
 
         current_layer.use_text(
-            &device.risk_score.to_string(),
+            device.risk_score.to_string(),
             FONT_SIZE_BODY,
             Mm(col4_x),
             Mm(y_pos),
@@ -231,7 +240,7 @@ pub fn generate_network_health_pdf(recommendations: &SecurityReport) -> Result<V
     // Date
     let report_date = Utc::now().format("%Y-%m-%d %H:%M:%S UTC").to_string();
     current_layer.use_text(
-        &format!("Generated: {}", report_date),
+        format!("Generated: {}", report_date),
         FONT_SIZE_BODY,
         Mm(20.0),
         Mm(y_pos),
@@ -240,11 +249,16 @@ pub fn generate_network_health_pdf(recommendations: &SecurityReport) -> Result<V
     y_pos -= 15.0;
 
     // Summary
-    draw_section_header(&current_layer, &font_bold, &recommendations.summary, &mut y_pos);
+    draw_section_header(
+        &current_layer,
+        &font_bold,
+        &recommendations.summary,
+        &mut y_pos,
+    );
     y_pos -= 5.0;
 
     current_layer.use_text(
-        &format!("Critical Issues: {}", recommendations.critical_count),
+        format!("Critical Issues: {}", recommendations.critical_count),
         FONT_SIZE_BODY,
         Mm(20.0),
         Mm(y_pos),
@@ -253,7 +267,7 @@ pub fn generate_network_health_pdf(recommendations: &SecurityReport) -> Result<V
     y_pos -= 7.0;
 
     current_layer.use_text(
-        &format!("High Priority: {}", recommendations.high_count),
+        format!("High Priority: {}", recommendations.high_count),
         FONT_SIZE_BODY,
         Mm(20.0),
         Mm(y_pos),
@@ -262,7 +276,7 @@ pub fn generate_network_health_pdf(recommendations: &SecurityReport) -> Result<V
     y_pos -= 7.0;
 
     current_layer.use_text(
-        &format!("Total Recommendations: {}", recommendations.total_issues),
+        format!("Total Recommendations: {}", recommendations.total_issues),
         FONT_SIZE_BODY,
         Mm(20.0),
         Mm(y_pos),
@@ -296,7 +310,7 @@ pub fn generate_network_health_pdf(recommendations: &SecurityReport) -> Result<V
 
         // Description
         current_layer.use_text(
-            &rec.description,
+            rec.description.to_string(),
             FONT_SIZE_BODY,
             Mm(25.0),
             Mm(y_pos),
@@ -376,6 +390,9 @@ mod tests {
             system_description: None,
             uptime_seconds: None,
             neighbors: vec![],
+            vulnerabilities: vec![],
+            port_warnings: vec![],
+            security_grade: String::new(),
         }];
 
         let result = generate_scan_report_pdf(&scan, &devices, None);

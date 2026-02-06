@@ -2,8 +2,8 @@
 //!
 //! Calculates overall network security health score
 
-use serde::{Deserialize, Serialize};
 use crate::HostInfo;
+use serde::{Deserialize, Serialize};
 
 /// Network health status
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -40,13 +40,12 @@ impl NetworkHealth {
         }
 
         // Calculate security score (0-40 points)
-        let high_risk_count = hosts.iter()
-            .filter(|h| h.risk_score >= 50)
-            .count();
-        let medium_risk_count = hosts.iter()
+        let high_risk_count = hosts.iter().filter(|h| h.risk_score >= 50).count();
+        let medium_risk_count = hosts
+            .iter()
             .filter(|h| h.risk_score >= 25 && h.risk_score < 50)
             .count();
-        
+
         let security = if high_risk_count == 0 && medium_risk_count == 0 {
             40
         } else {
@@ -55,25 +54,22 @@ impl NetworkHealth {
         };
 
         // Calculate stability score (0-30 points)
-        let responsive_count = hosts.iter()
+        let responsive_count = hosts
+            .iter()
             .filter(|h| h.response_time_ms.is_some())
             .count();
         let response_rate = responsive_count as f32 / total as f32;
         let stability = (response_rate * 30.0) as u8;
 
         // Calculate compliance score (0-30 points)
-        let randomized_count = hosts.iter()
-            .filter(|h| h.is_randomized)
-            .count();
-        let unknown_count = hosts.iter()
-            .filter(|h| h.device_type == "UNKNOWN")
-            .count();
+        let randomized_count = hosts.iter().filter(|h| h.is_randomized).count();
+        let unknown_count = hosts.iter().filter(|h| h.device_type == "UNKNOWN").count();
         let compliance_penalty = (randomized_count * 3 + unknown_count * 2) as u8;
         let compliance = 30u8.saturating_sub(compliance_penalty);
 
         // Total score
         let score = security + stability + compliance;
-        
+
         // Determine grade
         let grade = match score {
             90..=100 => 'A',
@@ -95,12 +91,15 @@ impl NetworkHealth {
         // Generate insights
         let mut insights = Vec::new();
         insights.push(format!("{} devices scanned", total));
-        
+
         if high_risk_count > 0 {
             insights.push(format!("⚠️ {} high-risk devices detected", high_risk_count));
         }
         if randomized_count > 0 {
-            insights.push(format!("🔒 {} devices using randomized MACs", randomized_count));
+            insights.push(format!(
+                "🔒 {} devices using randomized MACs",
+                randomized_count
+            ));
         }
         if unknown_count > 0 {
             insights.push(format!("❓ {} unidentified device types", unknown_count));

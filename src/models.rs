@@ -55,14 +55,40 @@ pub struct HostInfo {
     // LLDP/CDP neighbor discovery (for topology mapping)
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub neighbors: Vec<NeighborInfo>,
-    
+
     // Vulnerability information
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub vulnerabilities: Vec<VulnerabilityInfo>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub port_warnings: Vec<PortWarning>,
     #[serde(default)]
-    pub security_grade: String,  // "A", "B", "C", "D", "F"
+    pub security_grade: String, // "A", "B", "C", "D", "F"
+}
+
+impl HostInfo {
+    /// Canonical minimal constructor to avoid field drift across call-sites.
+    pub fn new(ip: String, mac: String, device_type: String, discovery_method: String) -> Self {
+        Self {
+            ip,
+            mac,
+            vendor: None,
+            is_randomized: false,
+            response_time_ms: None,
+            ttl: None,
+            os_guess: None,
+            device_type,
+            risk_score: 0,
+            open_ports: Vec::new(),
+            discovery_method,
+            hostname: None,
+            system_description: None,
+            uptime_seconds: None,
+            neighbors: Vec::new(),
+            vulnerabilities: Vec::new(),
+            port_warnings: Vec::new(),
+            security_grade: String::new(),
+        }
+    }
 }
 
 /// Information about a network neighbor (from LLDP/CDP)
@@ -94,7 +120,7 @@ pub struct InterfaceInfo {
 pub struct VulnerabilityInfo {
     pub cve_id: String,
     pub description: String,
-    pub severity: String,  // CRITICAL, HIGH, MEDIUM, LOW
+    pub severity: String, // CRITICAL, HIGH, MEDIUM, LOW
     pub cvss_score: Option<f32>,
 }
 
@@ -104,6 +130,6 @@ pub struct PortWarning {
     pub port: u16,
     pub service: String,
     pub warning: String,
-    pub severity: String,  // CRITICAL, HIGH, MEDIUM, LOW
+    pub severity: String, // CRITICAL, HIGH, MEDIUM, LOW
     pub recommendation: Option<String>,
 }
