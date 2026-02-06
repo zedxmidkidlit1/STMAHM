@@ -73,7 +73,10 @@ pub fn generate_scan_report_pdf(
     y_pos -= 7.0;
 
     current_layer.use_text(
-        &format!("Scan Duration: {:.2}s", scan.scan_duration_ms as f64 / 1000.0),
+        &format!(
+            "Scan Duration: {:.2}s",
+            scan.scan_duration_ms as f64 / 1000.0
+        ),
         FONT_SIZE_BODY,
         Mm(20.0),
         Mm(y_pos),
@@ -240,7 +243,12 @@ pub fn generate_network_health_pdf(recommendations: &SecurityReport) -> Result<V
     y_pos -= 15.0;
 
     // Summary
-    draw_section_header(&current_layer, &font_bold, &recommendations.summary, &mut y_pos);
+    draw_section_header(
+        &current_layer,
+        &font_bold,
+        &recommendations.summary,
+        &mut y_pos,
+    );
     y_pos -= 5.0;
 
     current_layer.use_text(
@@ -295,13 +303,7 @@ pub fn generate_network_health_pdf(recommendations: &SecurityReport) -> Result<V
         y_pos -= 7.0;
 
         // Description
-        current_layer.use_text(
-            &rec.description,
-            FONT_SIZE_BODY,
-            Mm(25.0),
-            Mm(y_pos),
-            &font,
-        );
+        current_layer.use_text(&rec.description, FONT_SIZE_BODY, Mm(25.0), Mm(y_pos), &font);
         y_pos -= 7.0;
 
         // Affected devices (limit to 3)
@@ -376,6 +378,9 @@ mod tests {
             system_description: None,
             uptime_seconds: None,
             neighbors: vec![],
+            vulnerabilities: vec![],
+            port_warnings: vec![],
+            security_grade: String::new(),
         }];
 
         let result = generate_scan_report_pdf(&scan, &devices, None);

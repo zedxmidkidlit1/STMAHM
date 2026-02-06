@@ -122,25 +122,26 @@ mod tests {
 
     #[test]
     fn test_export_hosts_csv() {
-        let hosts = vec![
-            HostInfo {
-                ip: "192.168.1.1".to_string(),
-                mac: "aa:bb:cc:dd:ee:ff".to_string(),
-                hostname: Some("router".to_string()),
-                vendor: Some("TP-Link".to_string()),
-                device_type: "Router".to_string(),
-                os_guess: Some("Linux".to_string()),
-                risk_score: 15,
-                open_ports: vec![80, 443],
-                response_time_ms: Some(5),
-                is_randomized: false,
-                ttl: Some(64),
-                discovery_method: "ARP+ICMP+TCP".to_string(),
-                system_description: None,
-                uptime_seconds: None,
-                neighbors: vec![],
-            },
-        ];
+        let hosts = vec![HostInfo {
+            ip: "192.168.1.1".to_string(),
+            mac: "aa:bb:cc:dd:ee:ff".to_string(),
+            hostname: Some("router".to_string()),
+            vendor: Some("TP-Link".to_string()),
+            device_type: "Router".to_string(),
+            os_guess: Some("Linux".to_string()),
+            risk_score: 15,
+            open_ports: vec![80, 443],
+            response_time_ms: Some(5),
+            is_randomized: false,
+            ttl: Some(64),
+            discovery_method: "ARP+ICMP+TCP".to_string(),
+            system_description: None,
+            uptime_seconds: None,
+            neighbors: vec![],
+            vulnerabilities: vec![],
+            port_warnings: vec![],
+            security_grade: String::new(),
+        }];
 
         let csv = export_hosts_csv(&hosts).unwrap();
         assert!(csv.contains("192.168.1.1"));
