@@ -2,7 +2,7 @@
 //!
 //! These commands are callable from the React frontend via `invoke()`.
 
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 use std::time::Instant;
 use tokio::sync::Mutex as TokioMutex;
 use tauri::Emitter;
@@ -53,6 +53,22 @@ impl MonitorState {
             monitor: TokioMutex::new(BackgroundMonitor::new()),
         }
     }
+}
+
+
+fn get_db_connection(state: &tauri::State<'_, AppState>) -> Result<Arc<Mutex<rusqlite::Connection>>, String> {
+    let db = state
+        .db
+        .lock()
+        .map_err(|_| "Database state lock poisoned".to_string())?;
+    Ok(db.connection())
+}
+
+fn lock_db_connection(
+    conn: &Arc<Mutex<rusqlite::Connection>>,
+) -> Result<std::sync::MutexGuard<'_, rusqlite::Connection>, String> {
+    conn.lock()
+        .map_err(|_| "Database connection lock poisoned".to_string())
 }
 
 
@@ -142,8 +158,8 @@ pub async fn scan_network(state: tauri::State<'_, AppState>) -> Result<ScanResul
             }.to_string();
 
             // Lookup vulnerabilities and port warnings from database
-            let db_conn = state.db.lock().unwrap().connection();
-            let conn = db_conn.lock().unwrap();
+            let db_conn = get_db_connection(&state)?;
+            let conn = lock_db_connection(&db_conn)?;
             
             // Smart CVE filtering based on device type and open ports
             let device_type_str = device_type.as_str();
@@ -222,8 +238,8 @@ pub async fn scan_network(state: tauri::State<'_, AppState>) -> Result<ScanResul
     );
     
     // Lookup vulnerabilities for local machine using smart filtering
-    let db_conn = state.db.lock().unwrap().connection();
-    let conn = db_conn.lock().unwrap();
+    let db_conn = get_db_connection(&state)?;
+    let conn = lock_db_connection(&db_conn)?;
     
     let local_device_type_str = local_device_type.as_str();
     let local_vulnerabilities = if let Some(ref vendor) = local_vendor_info.vendor {
@@ -289,11 +305,13 @@ pub async fn scan_network(state: tauri::State<'_, AppState>) -> Result<ScanResul
 
     // Save scan result to database
     {
-        let db = state.db.lock().unwrap();
-        let conn = db.connection();
-        let conn = conn.lock().unwrap();
-        if let Err(e) = queries::insert_scan(&conn, &scan_result) {
-            eprintln!("[WARN] Failed to save scan to database: {}", e);
+        match get_db_connection(&state).and_then(|conn| lock_db_connection(&conn)) {
+            Ok(conn) => {
+                if let Err(e) = queries::insert_scan(&conn, &scan_result) {
+                    eprintln!("[WARN] Failed to save scan to database: {}", e);
+                }
+            }
+            Err(e) => eprintln!("[WARN] Failed to acquire database lock for scan persistence: {}", e),
         }
     }
 
@@ -316,9 +334,8 @@ pub fn get_interfaces() -> Result<Vec<String>, String> {
 /// Get recent scan history
 #[tauri::command]
 pub fn get_scan_history(state: tauri::State<'_, AppState>, limit: Option<i32>) -> Result<Vec<ScanRecord>, String> {
-    let db = state.db.lock().unwrap();
-    let conn = db.connection();
-    let conn = conn.lock().unwrap();
+    let conn = get_db_connection(&state)?;
+    let conn = lock_db_connection(&conn)?;
     
     queries::get_recent_scans(&conn, limit.unwrap_or(20))
         .map_err(|e| format!("Failed to get scan history: {}", e))
@@ -327,9 +344,8 @@ pub fn get_scan_history(state: tauri::State<'_, AppState>, limit: Option<i32>) -
 /// Get all known devices
 #[tauri::command]
 pub fn get_all_devices(state: tauri::State<'_, AppState>) -> Result<Vec<DeviceRecord>, String> {
-    let db = state.db.lock().unwrap();
-    let conn = db.connection();
-    let conn = conn.lock().unwrap();
+    let conn = get_db_connection(&state)?;
+    let conn = lock_db_connection(&conn)?;
     
     queries::get_all_devices(&conn)
         .map_err(|e| format!("Failed to get devices: {}", e))
@@ -338,9 +354,8 @@ pub fn get_all_devices(state: tauri::State<'_, AppState>) -> Result<Vec<DeviceRe
 /// Get device by MAC address
 #[tauri::command]
 pub fn get_device_by_mac(state: tauri::State<'_, AppState>, mac: String) -> Result<Option<DeviceRecord>, String> {
-    let db = state.db.lock().unwrap();
-    let conn = db.connection();
-    let conn = conn.lock().unwrap();
+    let conn = get_db_connection(&state)?;
+    let conn = lock_db_connection(&conn)?;
     
     queries::get_device_by_mac(&conn, &mac)
         .map_err(|e| format!("Failed to get device: {}", e))
@@ -349,9 +364,8 @@ pub fn get_device_by_mac(state: tauri::State<'_, AppState>, mac: String) -> Resu
 /// Update device custom name
 #[tauri::command]
 pub fn update_device_name(state: tauri::State<'_, AppState>, mac: String, name: String) -> Result<(), String> {
-    let db = state.db.lock().unwrap();
-    let conn = db.connection();
-    let conn = conn.lock().unwrap();
+    let conn = get_db_connection(&state)?;
+    let conn = lock_db_connection(&conn)?;
     
     queries::update_device_name(&conn, &mac, &name)
         .map_err(|e| format!("Failed to update device name: {}", e))
@@ -360,9 +374,8 @@ pub fn update_device_name(state: tauri::State<'_, AppState>, mac: String, name: 
 /// Get network statistics
 #[tauri::command]
 pub fn get_network_stats(state: tauri::State<'_, AppState>) -> Result<NetworkStats, String> {
-    let db = state.db.lock().unwrap();
-    let conn = db.connection();
-    let conn = conn.lock().unwrap();
+    let conn = get_db_connection(&state)?;
+    let conn = lock_db_connection(&conn)?;
     
     queries::get_network_stats(&conn)
         .map_err(|e| format!("Failed to get network stats: {}", e))
@@ -371,9 +384,8 @@ pub fn get_network_stats(state: tauri::State<'_, AppState>) -> Result<NetworkSta
 /// Get unread alerts
 #[tauri::command]
 pub fn get_unread_alerts(state: tauri::State<'_, AppState>) -> Result<Vec<AlertRecord>, String> {
-    let db = state.db.lock().unwrap();
-    let conn = db.connection();
-    let conn = conn.lock().unwrap();
+    let conn = get_db_connection(&state)?;
+    let conn = lock_db_connection(&conn)?;
     
     queries::get_unread_alerts(&conn)
         .map_err(|e| format!("Failed to get alerts: {}", e))
@@ -382,9 +394,8 @@ pub fn get_unread_alerts(state: tauri::State<'_, AppState>) -> Result<Vec<AlertR
 /// Mark alert as read
 #[tauri::command]
 pub fn mark_alert_read(state: tauri::State<'_, AppState>, alert_id: i64) -> Result<(), String> {
-    let db = state.db.lock().unwrap();
-    let conn = db.connection();
-    let conn = conn.lock().unwrap();
+    let conn = get_db_connection(&state)?;
+    let conn = lock_db_connection(&conn)?;
     
     queries::mark_alert_read(&conn, alert_id)
         .map_err(|e| format!("Failed to mark alert read: {}", e))
@@ -393,9 +404,8 @@ pub fn mark_alert_read(state: tauri::State<'_, AppState>, alert_id: i64) -> Resu
 /// Mark all alerts as read
 #[tauri::command]
 pub fn mark_all_alerts_read(state: tauri::State<'_, AppState>) -> Result<(), String> {
-    let db = state.db.lock().unwrap();
-    let conn = db.connection();
-    let conn = conn.lock().unwrap();
+    let conn = get_db_connection(&state)?;
+    let conn = lock_db_connection(&conn)?;
     
     queries::mark_all_alerts_read(&conn)
         .map_err(|e| format!("Failed to mark alerts read: {}", e))
@@ -403,9 +413,12 @@ pub fn mark_all_alerts_read(state: tauri::State<'_, AppState>) -> Result<(), Str
 
 /// Get database path (for debugging)
 #[tauri::command]
-pub fn get_database_path(state: tauri::State<'_, AppState>) -> String {
-    let db = state.db.lock().unwrap();
-    db.path().to_string_lossy().to_string()
+pub fn get_database_path(state: tauri::State<'_, AppState>) -> Result<String, String> {
+    let db = state
+        .db
+        .lock()
+        .map_err(|_| "Database state lock poisoned".to_string())?;
+    Ok(db.path().to_string_lossy().to_string())
 }
 
 // =====================================================
@@ -462,9 +475,8 @@ use host_discovery::{NetworkHealth, DeviceDistribution};
 pub fn get_network_health(
     state: tauri::State<'_, AppState>,
 ) -> Result<serde_json::Value, String> {
-    let db = state.db.lock().unwrap();
-    let conn = db.connection();
-    let conn = conn.lock().unwrap();
+    let conn = get_db_connection(&state)?;
+    let conn = lock_db_connection(&conn)?;
     
     // Get recent device history to calculate health
     let devices = queries::get_all_devices(&conn)
@@ -556,9 +568,8 @@ pub fn get_network_health(
 pub fn get_device_distribution(
     state: tauri::State<'_, AppState>,
 ) -> Result<serde_json::Value, String> {
-    let db = state.db.lock().unwrap();
-    let conn = db.connection();
-    let conn = conn.lock().unwrap();
+    let conn = get_db_connection(&state)?;
+    let conn = lock_db_connection(&conn)?;
     
     let devices = queries::get_all_devices(&conn)
         .map_err(|e| format!("Failed to get devices: {}", e))?;
@@ -575,6 +586,82 @@ pub fn get_device_distribution(
     }))
 }
 
+/// Generate machine-readable schema for ScanResult contract.
+#[tauri::command]
+pub fn get_scan_result_schema() -> Result<serde_json::Value, String> {
+    let mut host = HostInfo::new(
+        "192.168.1.10".to_string(),
+        "AA:BB:CC:DD:EE:FF".to_string(),
+        "PC".to_string(),
+        "ARP+ICMP".to_string(),
+    );
+    host.vendor = Some("Example Vendor".to_string());
+    host.response_time_ms = Some(5);
+    host.ttl = Some(64);
+    host.os_guess = Some("Linux/Unix/macOS".to_string());
+    host.risk_score = 10;
+    host.open_ports = vec![22, 443];
+    host.hostname = Some("example-host".to_string());
+    host.system_description = Some("Example system".to_string());
+    host.uptime_seconds = Some(3600);
+    host.neighbors.push(host_discovery::NeighborInfo {
+        local_port: "eth0".to_string(),
+        remote_device: "switch-1".to_string(),
+        remote_port: "Gi0/1".to_string(),
+        remote_ip: Some("192.168.1.2".to_string()),
+    });
+    host.vulnerabilities.push(host_discovery::VulnerabilityInfo {
+        cve_id: "CVE-2026-0001".to_string(),
+        description: "Example vulnerability".to_string(),
+        severity: "MEDIUM".to_string(),
+        cvss_score: Some(5.0),
+    });
+    host.port_warnings.push(host_discovery::PortWarning {
+        port: 23,
+        service: "telnet".to_string(),
+        warning: "Insecure protocol".to_string(),
+        severity: "HIGH".to_string(),
+        recommendation: Some("Use SSH".to_string()),
+    });
+    host.security_grade = "B".to_string();
+
+    let sample_scan = ScanResult {
+        interface_name: "eth0".to_string(),
+        local_ip: "192.168.1.100".to_string(),
+        local_mac: "00:11:22:33:44:55".to_string(),
+        subnet: "192.168.1.0/24".to_string(),
+        scan_method: "Active ARP + ICMP + TCP".to_string(),
+        arp_discovered: 1,
+        icmp_discovered: 1,
+        total_hosts: 1,
+        scan_duration_ms: 1234,
+        active_hosts: vec![host],
+    };
+
+    let scan_value = serde_json::to_value(&sample_scan)
+        .map_err(|e| format!("Failed to serialize ScanResult sample: {}", e))?;
+
+    let scan_fields = scan_value
+        .as_object()
+        .map(|obj| obj.keys().cloned().collect::<Vec<_>>())
+        .unwrap_or_default();
+
+    let host_fields = scan_value
+        .get("active_hosts")
+        .and_then(|h| h.as_array())
+        .and_then(|arr| arr.first())
+        .and_then(|v| v.as_object())
+        .map(|obj| obj.keys().cloned().collect::<Vec<_>>())
+        .unwrap_or_default();
+
+    Ok(serde_json::json!({
+        "schema_version": "1.1.0",
+        "generated_from": "serialized_rust_types",
+        "scan_result_fields": scan_fields,
+        "host_info_fields": host_fields,
+    }))
+}
+
 // =====================================================
 // Export Commands
 // =====================================================
@@ -584,9 +671,8 @@ pub fn get_device_distribution(
 pub fn export_devices_to_csv(
     state: tauri::State<'_, AppState>,
 ) -> Result<String, String> {
-    let db = state.db.lock().unwrap();
-    let conn = db.connection();
-    let conn = conn.lock().unwrap();
+    let conn = get_db_connection(&state)?;
+    let conn = lock_db_connection(&conn)?;
     
     let devices = queries::get_all_devices(&conn)
         .map_err(|e| format!("Failed to get devices: {}", e))?;
@@ -630,9 +716,8 @@ pub fn export_scan_report(
     scan: ScanResult,
     hosts: Vec<HostInfo>,
 ) -> Result<Vec<u8>, String> {
-    let db = state.db.lock().unwrap();
-    let conn = db.connection();
-    let conn = conn.lock().unwrap();
+    let conn = get_db_connection(&state)?;
+    let conn = lock_db_connection(&conn)?;
     
     let stats = queries::get_network_stats(&conn).ok();
     

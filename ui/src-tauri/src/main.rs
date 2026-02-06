@@ -22,8 +22,13 @@ fn main() {
     tracing::info!("Network Topology Mapper starting...");
     
     // Initialize application state with database
-    let app_state = AppState::new()
-        .expect("Failed to initialize application state");
+    let app_state = match AppState::new() {
+        Ok(state) => state,
+        Err(e) => {
+            eprintln!("Failed to initialize application state: {}", e);
+            std::process::exit(1);
+        }
+    };
     
     tracing::info!("Database initialized successfully");
 
@@ -77,7 +82,11 @@ fn main() {
             commands::get_demo_alerts,
             // Debug
             commands::get_database_path,
+            commands::get_scan_result_schema,
         ])
         .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .unwrap_or_else(|e| {
+            eprintln!("error while running tauri application: {}", e);
+            std::process::exit(1);
+        });
 }

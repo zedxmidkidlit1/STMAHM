@@ -58,14 +58,16 @@ pub fn find_valid_interface() -> Result<InterfaceInfo> {
 
                 // Skip Hyper-V/WSL typical ranges (172.16-31.x.x with large subnets)
                 let octets = ipv4.octets();
-                if octets[0] == 172 && octets[1] >= 16 && octets[1] <= 31 {
-                    if ip_network.prefix() <= 20 {
-                        log_stderr!("Skipping virtual subnet: {}/{}", ipv4, ip_network.prefix());
-                        continue;
-                    }
+                if octets[0] == 172
+                    && octets[1] >= 16
+                    && octets[1] <= 31
+                    && ip_network.prefix() <= 20
+                {
+                    log_stderr!("Skipping virtual subnet: {}/{}", ipv4, ip_network.prefix());
+                    continue;
                 }
 
-                let prefix_len = ip_network.prefix() as u8;
+                let prefix_len = ip_network.prefix();
 
                 log_stderr!(
                     "Found candidate interface: {} (IP: {}/{}, MAC: {})",
@@ -127,8 +129,8 @@ pub fn interface_score(ip: &Ipv4Addr) -> u32 {
     let octets = ip.octets();
     match octets[0] {
         192 if octets[1] == 168 => 100, // 192.168.x.x - typical home/office LAN
-        10 => 90,                        // 10.x.x.x - typical office LAN
+        10 => 90,                       // 10.x.x.x - typical office LAN
         172 if octets[1] >= 16 && octets[1] <= 31 => 50, // 172.16-31.x.x - could be virtual
-        _ => 70,                         // Other private IPs
+        _ => 70,                        // Other private IPs
     }
 }

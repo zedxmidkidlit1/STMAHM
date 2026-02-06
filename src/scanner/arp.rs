@@ -32,12 +32,13 @@ fn create_arp_request(
     source_mac: MacAddr,
     source_ip: Ipv4Addr,
     target_ip: Ipv4Addr,
-) -> Vec<u8> {
+) -> Result<Vec<u8>> {
     let mut buffer = vec![0u8; 42];
 
     // Build Ethernet frame
     {
-        let mut ethernet_packet = MutableEthernetPacket::new(&mut buffer[..14]).unwrap();
+        let mut ethernet_packet = MutableEthernetPacket::new(&mut buffer[..14])
+            .ok_or_else(|| anyhow!("Failed to construct Ethernet packet buffer"))?;
         ethernet_packet.set_destination(BROADCAST_MAC);
         ethernet_packet.set_source(source_mac);
         ethernet_packet.set_ethertype(EtherTypes::Arp);
@@ -45,7 +46,8 @@ fn create_arp_request(
 
     // Build ARP packet
     {
-        let mut arp_packet = MutableArpPacket::new(&mut buffer[14..42]).unwrap();
+        let mut arp_packet = MutableArpPacket::new(&mut buffer[14..42])
+            .ok_or_else(|| anyhow!("Failed to construct ARP packet buffer"))?;
         arp_packet.set_hardware_type(ArpHardwareTypes::Ethernet);
         arp_packet.set_protocol_type(EtherTypes::Ipv4);
         arp_packet.set_hw_addr_len(6);
@@ -57,7 +59,7 @@ fn create_arp_request(
         arp_packet.set_target_proto_addr(target_ip);
     }
 
-    buffer
+    Ok(buffer)
 }
 
 /// Performs Adaptive ARP scan with early termination
@@ -107,7 +109,7 @@ pub fn active_arp_scan(
 
     let discovered_clone = Arc::clone(&discovered);
     let host_count_clone = Arc::clone(&host_count);
-    let subnet_clone = subnet.clone();
+    let subnet_clone = *subnet;
 
     // Start receiver thread
     let receiver_handle = std::thread::spawn(move || {
@@ -126,10 +128,15 @@ pub fn active_arp_scan(
                                     if subnet_clone.contains(sender_ip)
                                         && !is_special_address(sender_ip, &subnet_clone)
                                     {
-                                        let mut map = discovered_clone.lock().unwrap();
-                                        if !map.contains_key(&sender_ip) {
-                                            map.insert(sender_ip, sender_mac);
-                                            host_count_clone.fetch_add(1, Ordering::SeqCst);
+                                        if let Ok(mut map) = discovered_clone.lock() {
+                                            if let std::collections::hash_map::Entry::Vacant(e) =
+                                                map.entry(sender_ip)
+                                            {
+                                                e.insert(sender_mac);
+                                                host_count_clone.fetch_add(1, Ordering::SeqCst);
+                                            }
+                                        } else {
+                                            break;
                                         }
                                     }
                                 }
@@ -155,7 +162,12 @@ pub fn active_arp_scan(
         // Get remaining IPs to scan
         let remaining: Vec<Ipv4Addr> = target_ips
             .iter()
-            .filter(|ip| !discovered.lock().unwrap().contains_key(ip))
+            .filter(|ip| {
+                discovered
+                    .lock()
+                    .map(|m| !m.contains_key(ip))
+                    .unwrap_or(false)
+            })
             .copied()
             .collect();
 
@@ -174,8 +186,9 @@ pub fn active_arp_scan(
 
         // BLAST: Send all requests as fast as possible
         for target_ip in &remaining {
-            let packet = create_arp_request(interface.mac, interface.ip, *target_ip);
-            let _ = tx.send_to(&packet, None);
+            if let Ok(packet) = create_arp_request(interface.mac, interface.ip, *target_ip) {
+                let _ = tx.send_to(&packet, None);
+            }
         }
 
         // ADAPTIVE WAIT: Check periodically, stop early if idle
@@ -219,7 +232,9 @@ pub fn active_arp_scan(
     // Wait for receiver to finish
     let _ = receiver_handle.join();
 
-    let map = discovered.lock().unwrap();
+    let map = discovered
+        .lock()
+        .map_err(|_| anyhow!("ARP discovered map lock poisoned"))?;
     for (ip, mac) in map.iter() {
         log_stderr!("[ARP] Found: {} -> {}", ip, mac);
     }

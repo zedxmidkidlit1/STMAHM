@@ -354,8 +354,11 @@ pub fn get_unread_alerts(conn: &Connection) -> Result<Vec<AlertRecord>> {
 
 /// Mark alert as read
 pub fn mark_alert_read(conn: &Connection, alert_id: i64) -> Result<()> {
-    conn.execute("UPDATE alerts SET is_read = 1 WHERE id = ?1", params![alert_id])
-        .context("Failed to mark alert read")?;
+    conn.execute(
+        "UPDATE alerts SET is_read = 1 WHERE id = ?1",
+        params![alert_id],
+    )
+    .context("Failed to mark alert read")?;
     Ok(())
 }
 
@@ -368,17 +371,20 @@ pub fn mark_all_alerts_read(conn: &Connection) -> Result<()> {
 
 /// Get network statistics
 pub fn get_network_stats(conn: &Connection) -> Result<NetworkStats> {
-    let total_devices: i64 = conn.query_row("SELECT COUNT(*) FROM devices", [], |row| row.get(0))?;
+    let total_devices: i64 =
+        conn.query_row("SELECT COUNT(*) FROM devices", [], |row| row.get(0))?;
 
     // Devices seen in last scan (online)
-    let online_devices: i64 = conn.query_row(
-        r#"
+    let online_devices: i64 = conn
+        .query_row(
+            r#"
         SELECT COUNT(DISTINCT device_id) FROM device_history
         WHERE scan_id = (SELECT MAX(id) FROM scans)
         "#,
-        [],
-        |row| row.get(0),
-    ).unwrap_or(0);
+            [],
+            |row| row.get(0),
+        )
+        .unwrap_or(0);
 
     let offline_devices = total_devices - online_devices;
 
@@ -393,14 +399,16 @@ pub fn get_network_stats(conn: &Connection) -> Result<NetworkStats> {
     )?;
 
     // High risk devices (risk_score > 70)
-    let high_risk_devices: i64 = conn.query_row(
-        r#"
+    let high_risk_devices: i64 = conn
+        .query_row(
+            r#"
         SELECT COUNT(DISTINCT device_id) FROM device_history
         WHERE scan_id = (SELECT MAX(id) FROM scans) AND risk_score > 70
         "#,
-        [],
-        |row| row.get(0),
-    ).unwrap_or(0);
+            [],
+            |row| row.get(0),
+        )
+        .unwrap_or(0);
 
     let total_scans: i64 = conn.query_row("SELECT COUNT(*) FROM scans", [], |row| row.get(0))?;
 
@@ -432,7 +440,10 @@ fn parse_datetime(s: String) -> DateTime<Utc> {
 }
 
 /// Lookup vulnerabilities for a vendor from CVE cache
-pub fn lookup_vulnerabilities(conn: &Connection, vendor: &str) -> Result<Vec<crate::models::VulnerabilityInfo>> {
+pub fn lookup_vulnerabilities(
+    conn: &Connection,
+    vendor: &str,
+) -> Result<Vec<crate::models::VulnerabilityInfo>> {
     let mut stmt = conn.prepare(
         r#"
         SELECT cve_id, description, severity, cvss_score
@@ -441,7 +452,7 @@ pub fn lookup_vulnerabilities(conn: &Connection, vendor: &str) -> Result<Vec<cra
         ORDER BY cvss_score DESC NULLS LAST
         "#,
     )?;
-    
+
     let vulns = stmt
         .query_map(params![vendor], |row| {
             Ok(crate::models::VulnerabilityInfo {
@@ -453,25 +464,29 @@ pub fn lookup_vulnerabilities(conn: &Connection, vendor: &str) -> Result<Vec<cra
         })?
         .filter_map(|r| r.ok())
         .collect();
-    
+
     Ok(vulns)
 }
 
 /// Lookup port warnings for given ports
-pub fn lookup_port_warnings(conn: &Connection, ports: &[u16]) -> Result<Vec<crate::models::PortWarning>> {
+pub fn lookup_port_warnings(
+    conn: &Connection,
+    ports: &[u16],
+) -> Result<Vec<crate::models::PortWarning>> {
     if ports.is_empty() {
         return Ok(Vec::new());
     }
-    
+
     let placeholders = ports.iter().map(|_| "?").collect::<Vec<_>>().join(",");
     let query = format!(
         "SELECT port, service, warning, severity, recommendation FROM port_warnings WHERE port IN ({})",
         placeholders
     );
-    
+
     let mut stmt = conn.prepare(&query)?;
-    let params: Vec<&dyn rusqlite::ToSql> = ports.iter().map(|p| p as &dyn rusqlite::ToSql).collect();
-    
+    let params: Vec<&dyn rusqlite::ToSql> =
+        ports.iter().map(|p| p as &dyn rusqlite::ToSql).collect();
+
     let warnings = stmt
         .query_map(params.as_slice(), |row| {
             Ok(crate::models::PortWarning {
@@ -484,7 +499,7 @@ pub fn lookup_port_warnings(conn: &Connection, ports: &[u16]) -> Result<Vec<crat
         })?
         .filter_map(|r| r.ok())
         .collect();
-    
+
     Ok(warnings)
 }
 

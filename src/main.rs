@@ -42,7 +42,6 @@ async fn scan_network(interface: &InterfaceInfo) -> Result<ScanResult> {
     let arp_hosts = tokio::task::spawn_blocking({
         let interface = interface.clone();
         let ips = ips.clone();
-        let subnet = subnet.clone();
         move || active_arp_scan(&interface, &ips, &subnet)
     })
     .await
@@ -51,11 +50,9 @@ async fn scan_network(interface: &InterfaceInfo) -> Result<ScanResult> {
     let arp_count = arp_hosts.len();
 
     // Phase 2 & 3: Run ICMP ping and TCP probe in parallel for faster scanning
-    let (response_times_result, port_results_result) = tokio::join!(
-        icmp_scan(&arp_hosts),
-        tcp_probe_scan(&arp_hosts)
-    );
-    
+    let (response_times_result, port_results_result) =
+        tokio::join!(icmp_scan(&arp_hosts), tcp_probe_scan(&arp_hosts));
+
     let response_times = response_times_result?;
     let icmp_count = response_times.len();
     let port_results = port_results_result?;
@@ -66,7 +63,7 @@ async fn scan_network(interface: &InterfaceInfo) -> Result<ScanResult> {
         .filter(|ip| **ip != interface.ip)
         .copied()
         .collect();
-    
+
     let snmp_data = if SNMP_ENABLED {
         snmp_enrich(&host_ips).await.unwrap_or_default()
     } else {
@@ -87,21 +84,22 @@ async fn scan_network(interface: &InterfaceInfo) -> Result<ScanResult> {
             let os_guess = ttl.map(guess_os_from_ttl);
             let open_ports = port_results.get(ip).cloned().unwrap_or_default();
             let snmp = snmp_data.get(ip);
-            
+
             let mut method = match (response_time.is_some(), !open_ports.is_empty()) {
                 (true, true) => "ARP+ICMP+TCP",
                 (true, false) => "ARP+ICMP",
                 (false, true) => "ARP+TCP",
                 (false, false) => "ARP",
-            }.to_string();
-            
+            }
+            .to_string();
+
             if snmp.is_some() {
                 method.push_str("+SNMP");
             }
 
             let mac_str = format!("{}", mac);
             let vendor_info = lookup_vendor_info(&mac_str);
-            
+
             // Infer device type and calculate risk score
             // Gateway detection: typically ends in .1 or has web interface on port 80
             let is_gateway = ip.octets()[3] == 1 || open_ports.contains(&80);
@@ -111,63 +109,61 @@ async fn scan_network(interface: &InterfaceInfo) -> Result<ScanResult> {
                 &open_ports,
                 is_gateway,
             );
-            let risk_score = calculate_risk_score(device_type, &open_ports, vendor_info.is_randomized);
-            
-            HostInfo {
-                ip: ip.to_string(),
-                vendor: vendor_info.vendor,
-                is_randomized: vendor_info.is_randomized,
-                mac: mac_str,
-                response_time_ms: response_time,
-                ttl,
-                os_guess,
-                device_type: device_type.as_str().to_string(),
-                risk_score,
-                open_ports,
-                discovery_method: method,
-                // DNS hostname takes precedence, fallback to SNMP hostname
-                hostname: dns_hostnames.get(ip).cloned()
-                    .or_else(|| snmp.and_then(|s| s.hostname.clone())),
-                system_description: snmp.and_then(|s| s.system_description.clone()),
-                uptime_seconds: snmp.and_then(|s| s.uptime_seconds),
-                neighbors: snmp.map(|s| {
-                    s.neighbors.iter().map(|n| NeighborInfo {
-                        local_port: n.local_port.clone(),
-                        remote_device: n.remote_device.clone(),
-                        remote_port: n.remote_port.clone(),
-                        remote_ip: n.remote_ip.clone(),
-                    }).collect()
-                }).unwrap_or_default(),
-            }
+            let risk_score =
+                calculate_risk_score(device_type, &open_ports, vendor_info.is_randomized);
+
+            let mut host = HostInfo::new(
+                ip.to_string(),
+                mac_str,
+                device_type.as_str().to_string(),
+                method,
+            );
+            host.vendor = vendor_info.vendor;
+            host.is_randomized = vendor_info.is_randomized;
+            host.response_time_ms = response_time;
+            host.ttl = ttl;
+            host.os_guess = os_guess;
+            host.risk_score = risk_score;
+            host.open_ports = open_ports;
+            // DNS hostname takes precedence, fallback to SNMP hostname
+            host.hostname = dns_hostnames
+                .get(ip)
+                .cloned()
+                .or_else(|| snmp.and_then(|s| s.hostname.clone()));
+            host.system_description = snmp.and_then(|s| s.system_description.clone());
+            host.uptime_seconds = snmp.and_then(|s| s.uptime_seconds);
+            host.neighbors = snmp
+                .map(|s| {
+                    s.neighbors
+                        .iter()
+                        .map(|n| NeighborInfo {
+                            local_port: n.local_port.clone(),
+                            remote_device: n.remote_device.clone(),
+                            remote_port: n.remote_port.clone(),
+                            remote_ip: n.remote_ip.clone(),
+                        })
+                        .collect()
+                })
+                .unwrap_or_default();
+            host
         })
         .collect();
 
     // Add local machine to results
     let local_mac = format!("{}", interface.mac);
     let local_vendor_info = lookup_vendor_info(&local_mac);
-    let local_device_type = infer_device_type(
-        local_vendor_info.vendor.as_deref(),
-        None,
-        &[],
-        false,
+    let local_device_type =
+        infer_device_type(local_vendor_info.vendor.as_deref(), None, &[], false);
+    let mut local_host = HostInfo::new(
+        interface.ip.to_string(),
+        local_mac,
+        local_device_type.as_str().to_string(),
+        "LOCAL".to_string(),
     );
-    active_hosts.push(HostInfo {
-        ip: interface.ip.to_string(),
-        vendor: local_vendor_info.vendor,
-        is_randomized: local_vendor_info.is_randomized,
-        mac: local_mac,
-        response_time_ms: Some(0),
-        ttl: None,
-        os_guess: None,
-        device_type: local_device_type.as_str().to_string(),
-        risk_score: 0,
-        open_ports: Vec::new(),
-        discovery_method: "LOCAL".to_string(),
-        hostname: None,
-        system_description: None,
-        uptime_seconds: None,
-        neighbors: Vec::new(),
-    });
+    local_host.vendor = local_vendor_info.vendor;
+    local_host.is_randomized = local_vendor_info.is_randomized;
+    local_host.response_time_ms = Some(0);
+    active_hosts.push(local_host);
 
     // Sort by IP
     active_hosts.sort_by(|a, b| {
@@ -205,9 +201,13 @@ async fn scan_network(interface: &InterfaceInfo) -> Result<ScanResult> {
 #[tokio::main]
 async fn main() {
     match run().await {
-        Ok(result) => {
-            println!("{}", serde_json::to_string_pretty(&result).unwrap());
-        }
+        Ok(result) => match serde_json::to_string_pretty(&result) {
+            Ok(json) => println!("{}", json),
+            Err(e) => {
+                log_error!("Failed to serialize scan result: {}", e);
+                std::process::exit(1);
+            }
+        },
         Err(e) => {
             log_error!("{:#}", e);
             std::process::exit(1);
@@ -243,15 +243,17 @@ mod tests {
             icmp_discovered: 3,
             total_hosts: 5,
             scan_duration_ms: 1000,
-            active_hosts: vec![
-                HostInfo {
-                    ip: "192.168.1.1".to_string(),
-                    mac: "AA:BB:CC:DD:EE:FF".to_string(),
-                    response_time_ms: Some(10),
-                    open_ports: vec![80],
-                    discovery_method: "ARP+ICMP+TCP".to_string(),
-                },
-            ],
+            active_hosts: vec![{
+                let mut host = HostInfo::new(
+                    "192.168.1.1".to_string(),
+                    "AA:BB:CC:DD:EE:FF".to_string(),
+                    "UNKNOWN".to_string(),
+                    "ARP+ICMP+TCP".to_string(),
+                );
+                host.response_time_ms = Some(10);
+                host.open_ports = vec![80];
+                host
+            }],
         };
 
         let json = serde_json::to_string(&result).unwrap();

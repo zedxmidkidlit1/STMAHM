@@ -10,56 +10,56 @@ use serde::{Deserialize, Serialize};
 pub enum NetworkEvent {
     /// Monitoring session started
     MonitoringStarted { interval_seconds: u64 },
-    
+
     /// Monitoring session stopped
     MonitoringStopped,
-    
+
     /// Scan cycle started
     ScanStarted { scan_number: u32 },
-    
+
     /// Scan progress update
-    ScanProgress { 
-        phase: String, 
+    ScanProgress {
+        phase: String,
         percent: u8,
         message: String,
     },
-    
+
     /// Scan cycle completed
-    ScanCompleted { 
+    ScanCompleted {
         scan_number: u32,
-        hosts_found: usize, 
+        hosts_found: usize,
         duration_ms: u64,
     },
-    
+
     /// New device discovered on network
-    NewDeviceDiscovered { 
+    NewDeviceDiscovered {
         ip: String,
         mac: String,
         hostname: Option<String>,
         device_type: String,
     },
-    
+
     /// Device went offline
-    DeviceWentOffline { 
-        mac: String, 
+    DeviceWentOffline {
+        mac: String,
         last_ip: String,
         hostname: Option<String>,
     },
-    
+
     /// Device came back online  
-    DeviceCameOnline { 
-        mac: String, 
+    DeviceCameOnline {
+        mac: String,
         ip: String,
         hostname: Option<String>,
     },
-    
+
     /// Device IP address changed
     DeviceIpChanged {
         mac: String,
         old_ip: String,
         new_ip: String,
     },
-    
+
     /// Error during monitoring
     MonitoringError { message: String },
 }

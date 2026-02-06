@@ -17,18 +17,16 @@ pub struct Database {
 
 impl Database {
     /// Creates a new database connection
-    /// 
+    ///
     /// # Arguments
     /// * `path` - Path to the SQLite database file (created if not exists)
     pub fn new(path: PathBuf) -> Result<Self> {
         // Create parent directories if needed
         if let Some(parent) = path.parent() {
-            std::fs::create_dir_all(parent)
-                .context("Failed to create database directory")?;
+            std::fs::create_dir_all(parent).context("Failed to create database directory")?;
         }
 
-        let conn = Connection::open(&path)
-            .context("Failed to open database")?;
+        let conn = Connection::open(&path).context("Failed to open database")?;
 
         let db = Self {
             conn: Arc::new(Mutex::new(conn)),
@@ -43,8 +41,7 @@ impl Database {
 
     /// Creates an in-memory database (for testing)
     pub fn in_memory() -> Result<Self> {
-        let conn = Connection::open_in_memory()
-            .context("Failed to open in-memory database")?;
+        let conn = Connection::open_in_memory().context("Failed to open in-memory database")?;
 
         let db = Self {
             conn: Arc::new(Mutex::new(conn)),
@@ -58,20 +55,23 @@ impl Database {
 
     /// Initialize database schema
     fn initialize(&self) -> Result<()> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self
+            .conn
+            .lock()
+            .map_err(|_| anyhow::anyhow!("Database connection lock poisoned"))?;
         schema::create_tables(&conn)?;
-        
+
         // Seed vulnerability database if empty
         let cve_count: i64 = conn
             .query_row("SELECT COUNT(*) FROM cve_cache", [], |row| row.get(0))
             .unwrap_or(0);
-        
+
         if cve_count == 0 {
-            use super::seed_cves::{seed_vulnerabilities, seed_port_warnings};
+            use super::seed_cves::{seed_port_warnings, seed_vulnerabilities};
             seed_vulnerabilities(&conn)?;
             seed_port_warnings(&conn)?;
         }
-        
+
         Ok(())
     }
 
@@ -90,10 +90,10 @@ impl Database {
         // Use platform-specific app data directory
         #[cfg(target_os = "windows")]
         let base = dirs::data_local_dir().unwrap_or_else(|| PathBuf::from("."));
-        
+
         #[cfg(target_os = "macos")]
         let base = dirs::data_dir().unwrap_or_else(|| PathBuf::from("."));
-        
+
         #[cfg(target_os = "linux")]
         let base = dirs::data_dir().unwrap_or_else(|| PathBuf::from("."));
 

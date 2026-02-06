@@ -114,9 +114,7 @@ async fn query_host_snmp(ip: Ipv4Addr) -> Option<SnmpData> {
     }
 
     // Only return if we got at least some data
-    if data.hostname.is_some()
-        || data.system_description.is_some()
-        || data.uptime_seconds.is_some()
+    if data.hostname.is_some() || data.system_description.is_some() || data.uptime_seconds.is_some()
     {
         Some(data)
     } else {
@@ -145,7 +143,9 @@ pub async fn snmp_enrich(hosts: &[Ipv4Addr]) -> Result<HashMap<Ipv4Addr, SnmpDat
         let results = Arc::clone(&results);
 
         let handle = tokio::spawn(async move {
-            let _permit = semaphore.acquire().await.expect("Semaphore closed");
+            let Ok(_permit) = semaphore.acquire().await else {
+                return;
+            };
 
             if let Some(data) = query_host_snmp(ip).await {
                 let mut map = results.lock().await;

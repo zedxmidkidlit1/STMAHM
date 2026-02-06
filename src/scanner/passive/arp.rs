@@ -29,7 +29,7 @@ impl ArpMonitor {
     pub fn new(interface: NetworkInterface) -> Self {
         Self { interface }
     }
-    
+
     /// Start monitoring ARP traffic (passive listening)
     ///
     /// Sends captured ARP events through the channel
@@ -38,17 +38,17 @@ impl ArpMonitor {
         tx: mpsc::Sender<ArpEvent>,
     ) -> Result<(), Box<dyn std::error::Error>> {
         let interface_name = self.interface.name.clone();
-        
+
         // Create datalink channel in non-promiscuous mode
         let channel = datalink::channel(&self.interface, Default::default())?;
-        
+
         let mut rx = match channel {
             Channel::Ethernet(_, rx) => rx,
             _ => return Err("Unsupported channel type".into()),
         };
-        
+
         tracing::info!("🎧 Started ARP monitoring on interface: {}", interface_name);
-        
+
         // Listen for ARP packets
         loop {
             match rx.next() {
@@ -73,7 +73,7 @@ impl ArpMonitor {
                                     is_request: arp.get_operation() == ArpOperations::Request,
                                     timestamp: chrono::Utc::now(),
                                 };
-                                
+
                                 tracing::debug!(
                                     "🎧 ARP: {} ({}) {} {}",
                                     event.sender_ip,
@@ -81,7 +81,7 @@ impl ArpMonitor {
                                     if event.is_request { "→" } else { "←" },
                                     event.target_ip
                                 );
-                                
+
                                 // Send event
                                 if tx.send(event).await.is_err() {
                                     tracing::warn!("ARP monitoring channel closed");
@@ -97,7 +97,7 @@ impl ArpMonitor {
                 }
             }
         }
-        
+
         Ok(())
     }
 }
@@ -105,7 +105,7 @@ impl ArpMonitor {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_arp_event_creation() {
         let event = ArpEvent {
@@ -115,7 +115,7 @@ mod tests {
             is_request: true,
             timestamp: chrono::Utc::now(),
         };
-        
+
         assert_eq!(event.sender_mac, "aa:bb:cc:dd:ee:ff");
         assert_eq!(event.sender_ip, "192.168.1.100");
         assert!(event.is_request);

@@ -6,9 +6,9 @@ use std::collections::HashMap;
 use std::net::{IpAddr, Ipv4Addr};
 use std::sync::Arc;
 use std::time::Duration;
-use surge_ping::{Client, Config, PingIdentifier, PingSequence, IcmpPacket};
-use tokio::sync::{Mutex, Semaphore};
 use std::time::Instant;
+use surge_ping::{Client, Config, IcmpPacket, PingIdentifier, PingSequence};
+use tokio::sync::{Mutex, Semaphore};
 
 use crate::config::{MAX_CONCURRENT_PINGS, PING_RETRIES, PING_TIMEOUT};
 
@@ -43,7 +43,7 @@ fn rand_id() -> u16 {
 }
 
 /// Guess the operating system based on TTL value
-/// 
+///
 /// Common default TTL values:
 /// - Linux/Unix/macOS: 64
 /// - Windows: 128
@@ -103,7 +103,10 @@ pub async fn icmp_scan(
     let client = match Client::new(&config) {
         Ok(c) => Arc::new(c),
         Err(e) => {
-            log_warn!("ICMP client unavailable ({}), skipping latency measurement", e);
+            log_warn!(
+                "ICMP client unavailable ({}), skipping latency measurement",
+                e
+            );
             return Ok(HashMap::new());
         }
     };
@@ -119,7 +122,9 @@ pub async fn icmp_scan(
         let results = Arc::clone(&results);
 
         let handle = tokio::spawn(async move {
-            let _permit = semaphore.acquire().await.expect("Semaphore closed");
+            let Ok(_permit) = semaphore.acquire().await else {
+                return;
+            };
 
             if let Some(icmp_result) = ping_host_with_retries(&client, ip).await {
                 let mut res = results.lock().await;
