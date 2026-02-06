@@ -589,76 +589,18 @@ pub fn get_device_distribution(
 /// Generate machine-readable schema for ScanResult contract.
 #[tauri::command]
 pub fn get_scan_result_schema() -> Result<serde_json::Value, String> {
-    let mut host = HostInfo::new(
-        "192.168.1.10".to_string(),
-        "AA:BB:CC:DD:EE:FF".to_string(),
-        "PC".to_string(),
-        "ARP+ICMP".to_string(),
-    );
-    host.vendor = Some("Example Vendor".to_string());
-    host.response_time_ms = Some(5);
-    host.ttl = Some(64);
-    host.os_guess = Some("Linux/Unix/macOS".to_string());
-    host.risk_score = 10;
-    host.open_ports = vec![22, 443];
-    host.hostname = Some("example-host".to_string());
-    host.system_description = Some("Example system".to_string());
-    host.uptime_seconds = Some(3600);
-    host.neighbors.push(host_discovery::NeighborInfo {
-        local_port: "eth0".to_string(),
-        remote_device: "switch-1".to_string(),
-        remote_port: "Gi0/1".to_string(),
-        remote_ip: Some("192.168.1.2".to_string()),
-    });
-    host.vulnerabilities.push(host_discovery::VulnerabilityInfo {
-        cve_id: "CVE-2026-0001".to_string(),
-        description: "Example vulnerability".to_string(),
-        severity: "MEDIUM".to_string(),
-        cvss_score: Some(5.0),
-    });
-    host.port_warnings.push(host_discovery::PortWarning {
-        port: 23,
-        service: "telnet".to_string(),
-        warning: "Insecure protocol".to_string(),
-        severity: "HIGH".to_string(),
-        recommendation: Some("Use SSH".to_string()),
-    });
-    host.security_grade = "B".to_string();
-
-    let sample_scan = ScanResult {
-        interface_name: "eth0".to_string(),
-        local_ip: "192.168.1.100".to_string(),
-        local_mac: "00:11:22:33:44:55".to_string(),
-        subnet: "192.168.1.0/24".to_string(),
-        scan_method: "Active ARP + ICMP + TCP".to_string(),
-        arp_discovered: 1,
-        icmp_discovered: 1,
-        total_hosts: 1,
-        scan_duration_ms: 1234,
-        active_hosts: vec![host],
-    };
-
-    let scan_value = serde_json::to_value(&sample_scan)
-        .map_err(|e| format!("Failed to serialize ScanResult sample: {}", e))?;
-
-    let scan_fields = scan_value
-        .as_object()
-        .map(|obj| obj.keys().cloned().collect::<Vec<_>>())
-        .unwrap_or_default();
-
-    let host_fields = scan_value
-        .get("active_hosts")
-        .and_then(|h| h.as_array())
-        .and_then(|arr| arr.first())
-        .and_then(|v| v.as_object())
-        .map(|obj| obj.keys().cloned().collect::<Vec<_>>())
-        .unwrap_or_default();
-
     Ok(serde_json::json!({
-        "schema_version": "1.1.0",
-        "generated_from": "serialized_rust_types",
-        "scan_result_fields": scan_fields,
-        "host_info_fields": host_fields,
+        "schema_version": "1.0.0",
+        "scan_result_fields": [
+            "interface_name", "local_ip", "local_mac", "subnet", "scan_method",
+            "arp_discovered", "icmp_discovered", "total_hosts", "scan_duration_ms", "active_hosts"
+        ],
+        "host_info_fields": [
+            "ip", "mac", "vendor", "is_randomized", "response_time_ms", "ttl",
+            "os_guess", "device_type", "risk_score", "open_ports", "discovery_method",
+            "hostname", "system_description", "uptime_seconds", "neighbors",
+            "vulnerabilities", "port_warnings", "security_grade"
+        ]
     }))
 }
 

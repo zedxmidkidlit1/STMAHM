@@ -28,11 +28,7 @@ macro_rules! log_stderr {
 }
 
 /// Creates an ARP request packet
-fn create_arp_request(
-    source_mac: MacAddr,
-    source_ip: Ipv4Addr,
-    target_ip: Ipv4Addr,
-) -> Result<Vec<u8>> {
+fn create_arp_request(source_mac: MacAddr, source_ip: Ipv4Addr, target_ip: Ipv4Addr) -> Vec<u8> {
     let mut buffer = vec![0u8; 42];
 
     // Build Ethernet frame
@@ -128,15 +124,12 @@ pub fn active_arp_scan(
                                     if subnet_clone.contains(sender_ip)
                                         && !is_special_address(sender_ip, &subnet_clone)
                                     {
-                                        if let Ok(mut map) = discovered_clone.lock() {
-                                            if let std::collections::hash_map::Entry::Vacant(e) =
-                                                map.entry(sender_ip)
-                                            {
-                                                e.insert(sender_mac);
-                                                host_count_clone.fetch_add(1, Ordering::SeqCst);
-                                            }
-                                        } else {
-                                            break;
+                                        let mut map = discovered_clone.lock().unwrap();
+                                        if let std::collections::hash_map::Entry::Vacant(e) =
+                                            map.entry(sender_ip)
+                                        {
+                                            e.insert(sender_mac);
+                                            host_count_clone.fetch_add(1, Ordering::SeqCst);
                                         }
                                     }
                                 }

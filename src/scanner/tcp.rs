@@ -54,9 +54,7 @@ pub async fn tcp_probe_scan(
         let port_results = Arc::clone(&port_results);
 
         let handle = tokio::spawn(async move {
-            let Ok(_permit) = semaphore.acquire().await else {
-                return;
-            };
+            let _permit = semaphore.acquire().await.expect("Semaphore closed");
 
             let open_ports = probe_host_ports(ip).await;
             if !open_ports.is_empty() {
