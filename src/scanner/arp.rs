@@ -28,12 +28,17 @@ macro_rules! log_stderr {
 }
 
 /// Creates an ARP request packet
-fn create_arp_request(source_mac: MacAddr, source_ip: Ipv4Addr, target_ip: Ipv4Addr) -> Vec<u8> {
+fn create_arp_request(
+    source_mac: MacAddr,
+    source_ip: Ipv4Addr,
+    target_ip: Ipv4Addr,
+) -> Result<Vec<u8>> {
     let mut buffer = vec![0u8; 42];
 
     // Build Ethernet frame
     {
-        let mut ethernet_packet = MutableEthernetPacket::new(&mut buffer[..14]).unwrap();
+        let mut ethernet_packet = MutableEthernetPacket::new(&mut buffer[..14])
+            .ok_or_else(|| anyhow!("Failed to construct Ethernet packet buffer"))?;
         ethernet_packet.set_destination(BROADCAST_MAC);
         ethernet_packet.set_source(source_mac);
         ethernet_packet.set_ethertype(EtherTypes::Arp);
@@ -41,7 +46,8 @@ fn create_arp_request(source_mac: MacAddr, source_ip: Ipv4Addr, target_ip: Ipv4A
 
     // Build ARP packet
     {
-        let mut arp_packet = MutableArpPacket::new(&mut buffer[14..42]).unwrap();
+        let mut arp_packet = MutableArpPacket::new(&mut buffer[14..42])
+            .ok_or_else(|| anyhow!("Failed to construct ARP packet buffer"))?;
         arp_packet.set_hardware_type(ArpHardwareTypes::Ethernet);
         arp_packet.set_protocol_type(EtherTypes::Ipv4);
         arp_packet.set_hw_addr_len(6);
@@ -53,7 +59,7 @@ fn create_arp_request(source_mac: MacAddr, source_ip: Ipv4Addr, target_ip: Ipv4A
         arp_packet.set_target_proto_addr(target_ip);
     }
 
-    buffer
+    Ok(buffer)
 }
 
 /// Performs Adaptive ARP scan with early termination
@@ -172,8 +178,14 @@ pub fn active_arp_scan(
 
         // BLAST: Send all requests as fast as possible
         for target_ip in &remaining {
-            let packet = create_arp_request(interface.mac, interface.ip, *target_ip);
-            let _ = tx.send_to(&packet, None);
+            match create_arp_request(interface.mac, interface.ip, *target_ip) {
+                Ok(packet) => {
+                    let _ = tx.send_to(&packet, None);
+                }
+                Err(e) => {
+                    log_stderr!("Failed to create ARP request for {}: {}", target_ip, e);
+                }
+            }
         }
 
         // ADAPTIVE WAIT: Check periodically, stop early if idle
