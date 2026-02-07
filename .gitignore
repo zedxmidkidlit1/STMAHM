@@ -1,0 +1,102 @@
+# ========================
+# Rust / Cargo
+# ========================
+/target/
+ui/src-tauri/target/
+**/*.rs.bk
+Cargo.lock
+
+# ========================
+# Node.js / npm
+# ========================
+node_modules/
+ui/node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm
+.yarn-integrity
+
+# ========================
+# Build outputs
+# ========================
+/dist/
+ui/dist/
+*.exe
+*.msi
+*.dmg
+*.deb
+*.AppImage
+*.tar.gz
+
+# Tauri build
+ui/src-tauri/target/
+ui/src-tauri/gen/
+
+# ========================
+# IDE / Editor
+# ========================
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.project
+.classpath
+.settings/
+*.sublime-workspace
+*.sublime-project
+
+# ========================
+# OS Generated
+# ========================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+
+# ========================
+# Environment
+# ========================
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# ========================
+# Logs
+# ========================
+logs/
+*.log
+*.log.*
+
+# ========================
+# Testing
+# ========================
+coverage/
+.nyc_output/
+
+# ========================
+# Temporary files
+# ========================
+*.tmp
+*.temp
+*.bak
+*.backup
+tmp/
+temp/
+
+# ========================
+# Project specific
+# ========================
+# Npcap SDK (should be installed separately)
+npcap-sdk/
+
+# Scan results (optional - uncomment to ignore)
+# scan_results/
+# *.json
