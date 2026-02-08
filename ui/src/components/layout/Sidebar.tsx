@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import {
   LayoutDashboard,
   Network,
@@ -14,6 +13,8 @@ import {
 import clsx from 'clsx';
 import { motion, AnimatePresence } from 'framer-motion';
 import AdminProfile from './AdminProfile';
+import { useSidebarCollapse } from '../../hooks/useSidebarCollapse';
+import type { LucideIcon } from 'lucide-react';
 
 type Page = 'dashboard' | 'topology' | 'devices' | 'vulnerabilities' | 'alerts' | 'tools' | 'reports' | 'settings' | 'profile' | 'demo';
 
@@ -25,7 +26,7 @@ interface SidebarProps {
 interface NavItemData {
   id: Page;
   label: string;
-  icon: any;
+  icon: LucideIcon;
   badge?: number;
 }
 
@@ -38,7 +39,7 @@ export default function Sidebar({
   currentPage, 
   onNavigate,
 }: SidebarProps) {
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const { isCollapsed, toggle } = useSidebarCollapse();
 
   const navGroups: NavGroupData[] = [
     {
@@ -82,7 +83,7 @@ export default function Sidebar({
     >
       {/* Collapse Toggle Button */}
       <button
-        onClick={() => setIsCollapsed(!isCollapsed)}
+        onClick={toggle}
         className="absolute -right-3 top-6 z-10 w-6 h-6 rounded-full bg-bg-elevated border border-theme 
                    flex items-center justify-center text-text-muted hover:text-text-primary hover:bg-bg-hover
                    transition-all shadow-lg"

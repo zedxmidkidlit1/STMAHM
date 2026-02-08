@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { invoke } from '@tauri-apps/api/core';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Activity,
@@ -11,41 +10,51 @@ import {
   Hash,
   Terminal,
 } from 'lucide-react';
+import { tauriClient } from '../lib/api/tauri-client';
+import type {
+  PingResult,
+  PortScanResult,
+  VendorLookupResult,
+} from '../lib/api/types';
 
 type Tab = 'ping' | 'portscan' | 'maclookup';
-
-interface PingResult {
-  success: boolean;
-  latency_ms: number | null;
-  ttl: number | null;
-  os_guess: string | null;
-  error: string | null;
-}
-
-interface PortScanResult {
-  port: number;
-  is_open: boolean;
-  service: string | null;
-}
-
-interface VendorLookupResult {
-  mac: string;
-  vendor: string | null;
-  is_randomized: boolean;
-}
+const CARD =
+  'rounded-2xl border border-slate-200/70 bg-white/85 backdrop-blur-sm shadow-sm dark:border-slate-800 dark:bg-slate-950/65';
 
 export default function Tools() {
   const [activeTab, setActiveTab] = useState<Tab>('ping');
 
   return (
-    <div className="p-4">
-      {/* Tool Tabs */}
-      <div className="flex items-center gap-2 mb-4">
+    <div className="relative flex-1 overflow-y-auto bg-bg-primary p-4 sm:p-6 lg:p-8">
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div className="absolute -top-16 -left-16 h-80 w-80 rounded-full bg-cyan-300/15 blur-3xl dark:bg-cyan-500/10" />
+        <div className="absolute top-20 right-0 h-96 w-96 rounded-full bg-teal-300/10 blur-3xl dark:bg-teal-500/10" />
+      </div>
+
+      <div className="relative z-10 space-y-6">
+        <motion.section
+          initial={{ opacity: 0, y: -12 }}
+          animate={{ opacity: 1, y: 0 }}
+          className={`${CARD} p-5 sm:p-6`}
+        >
+          <div className="space-y-2">
+            <p className="text-xs uppercase tracking-[0.22em] text-cyan-600 dark:text-cyan-300">
+              Operator Toolkit
+            </p>
+            <h1 className="text-2xl font-black text-text-primary sm:text-4xl">Network Tools</h1>
+            <p className="max-w-2xl text-sm text-text-secondary sm:text-base">
+              Run active diagnostics for reachability, open ports, and vendor fingerprinting.
+            </p>
+          </div>
+        </motion.section>
+
+        {/* Tool Tabs */}
+        <div className={`${CARD} flex flex-wrap items-center gap-2 p-3`}>
         <button
-          onClick={() => setActiveTab('ping')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-            activeTab === 'ping'
-              ? 'bg-accent-purple text-white shadow-lg shadow-accent-purple/30'
+            onClick={() => setActiveTab('ping')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+              activeTab === 'ping'
+              ? 'bg-accent-blue text-white shadow-lg shadow-accent-blue/30'
               : 'bg-bg-secondary text-text-secondary hover:text-text-primary hover:bg-bg-hover'
           }`}
         >
@@ -54,10 +63,10 @@ export default function Tools() {
         </button>
 
         <button
-          onClick={() => setActiveTab('portscan')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-            activeTab === 'portscan'
-              ? 'bg-accent-purple text-white shadow-lg shadow-accent-purple/30'
+            onClick={() => setActiveTab('portscan')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+              activeTab === 'portscan'
+              ? 'bg-accent-blue text-white shadow-lg shadow-accent-blue/30'
               : 'bg-bg-secondary text-text-secondary hover:text-text-primary hover:bg-bg-hover'
           }`}
         >
@@ -66,32 +75,33 @@ export default function Tools() {
         </button>
 
         <button
-          onClick={() => setActiveTab('maclookup')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-            activeTab === 'maclookup'
-              ? 'bg-accent-purple text-white shadow-lg shadow-accent-purple/30'
+            onClick={() => setActiveTab('maclookup')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+              activeTab === 'maclookup'
+              ? 'bg-accent-blue text-white shadow-lg shadow-accent-blue/30'
               : 'bg-bg-secondary text-text-secondary hover:text-text-primary hover:bg-bg-hover'
           }`}
         >
           <Network className="w-4 h-4" />
           MAC Lookup
         </button>
-      </div>
+        </div>
 
-      {/* Tool Content */}
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={activeTab}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.15 }}
-        >
-          {activeTab === 'ping' && <PingTool />}
-          {activeTab === 'portscan' && <PortScanTool />}
-          {activeTab === 'maclookup' && <MACLookupTool />}
-        </motion.div>
-      </AnimatePresence>
+        {/* Tool Content */}
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={activeTab}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
+          >
+            {activeTab === 'ping' && <PingTool />}
+            {activeTab === 'portscan' && <PortScanTool />}
+            {activeTab === 'maclookup' && <MACLookupTool />}
+          </motion.div>
+        </AnimatePresence>
+      </div>
     </div>
   );
 }
@@ -113,10 +123,7 @@ function PingTool() {
     setTerminalOutput(['$ ping ' + target.trim(), 'Sending ' + count + ' packets...', '']);
 
     try {
-      const pingResults = await invoke<PingResult[]>('ping_host', {
-        target: target.trim(),
-        count,
-      });
+      const pingResults = await tauriClient.pingHost(target.trim(), count);
       setResults(pingResults);
       
       const output = pingResults.map((r) => 
@@ -140,10 +147,10 @@ function PingTool() {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
       {/* Configuration */}
-      <div className="bg-bg-secondary border border-theme rounded-lg p-4">
+      <div className={CARD + ' p-5'}>
         <div className="flex items-center gap-2 mb-3">
-          <Activity className="w-4 h-4 text-accent-purple" />
-          <h2 className="text-sm font-bold text-text-primary">Configuration</h2>
+          <Activity className="w-4 h-4 text-accent-blue" />
+          <h2 className="text-lg font-bold text-text-primary">Configuration</h2>
         </div>
 
         <div className="space-y-3">
@@ -155,7 +162,7 @@ function PingTool() {
               value={target}
               onChange={(e) => setTarget(e.target.value)}
               onKeyPress={(e) => e.key === 'Enter' && handlePing()}
-              className="w-full px-3 py-2 bg-bg-tertiary border border-theme rounded text-sm text-text-primary focus:outline-none focus:border-accent-purple transition-colors"
+              className="w-full px-3 py-2 bg-bg-tertiary border border-theme rounded text-sm text-text-primary focus:outline-none focus:border-accent-blue transition-colors"
             />
           </div>
 
@@ -164,7 +171,7 @@ function PingTool() {
             <select
               value={count}
               onChange={(e) => setCount(Number(e.target.value))}
-              className="w-full px-3 py-2 bg-bg-tertiary border border-theme rounded text-sm text-text-primary focus:outline-none focus:border-accent-purple transition-colors"
+              className="w-full px-3 py-2 bg-bg-tertiary border border-theme rounded text-sm text-text-primary focus:outline-none focus:border-accent-blue transition-colors"
             >
               <option value={4}>4 packets (Default)</option>
               <option value={1}>1 packet</option>
@@ -175,7 +182,7 @@ function PingTool() {
           <button
             onClick={handlePing}
             disabled={loading || !target.trim()}
-            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-accent-purple to-indigo-600 hover:from-accent-purple/90 hover:to-indigo-600/90 text-white rounded font-bold text-sm shadow-lg shadow-accent-purple/30 transition-all disabled:opacity-50"
+            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-accent-blue to-accent-sapphire hover:brightness-110 text-white rounded font-bold text-sm shadow-lg shadow-accent-blue/30 transition-all disabled:opacity-50"
           >
             {loading ? <><Loader2 className="w-4 h-4 animate-spin" />Pinging...</> : <><Play className="w-4 h-4" />Start Ping</>}
           </button>
@@ -184,11 +191,11 @@ function PingTool() {
 
       {/* Terminal & Results */}
       <div className="space-y-3">
-        <div className="bg-slate-900 border border-slate-700 rounded overflow-hidden">
+        <div className={CARD + ' overflow-hidden'}>
           <div className="flex items-center justify-between px-3 py-2 bg-slate-800 border-b border-slate-700">
             <div className="flex items-center gap-2">
               <Terminal className="w-3.5 h-3.5 text-green-400" />
-              <h3 className="font-bold text-white text-xs">Output</h3>
+              <h3 className="text-sm font-semibold text-white">Output</h3>
             </div>
           </div>
           <div className="p-3 font-mono text-xs text-green-400 h-48 overflow-y-auto">
@@ -208,19 +215,19 @@ function PingTool() {
 
         {results.length > 0 && (
           <div className="grid grid-cols-4 gap-2">
-            <div className="bg-bg-secondary border border-theme rounded p-2">
+            <div className={CARD + ' rounded-xl p-2'}>
               <p className="text-xs text-text-muted uppercase font-semibold">Sent</p>
               <p className="text-xl font-bold text-text-primary">{results.length}</p>
             </div>
-            <div className="bg-bg-secondary border border-theme rounded p-2">
+            <div className={CARD + ' rounded-xl p-2'}>
               <p className="text-xs text-text-muted uppercase font-semibold">Got</p>
               <p className="text-xl font-bold text-accent-green">{successfulPings}</p>
             </div>
-            <div className="bg-bg-secondary border border-theme rounded p-2">
+            <div className={CARD + ' rounded-xl p-2'}>
               <p className="text-xs text-text-muted uppercase font-semibold">Lost</p>
               <p className="text-xl font-bold text-accent-red">{results.length - successfulPings}</p>
             </div>
-            <div className="bg-bg-secondary border border-theme rounded p-2">
+            <div className={CARD + ' rounded-xl p-2'}>
               <p className="text-xs text-text-muted uppercase font-semibold">Avg</p>
               <p className="text-xl font-bold text-accent-blue">{avgLatency.toFixed(1)}ms</p>
             </div>
@@ -251,7 +258,7 @@ function PortScanTool() {
 
     try {
       const ports = Array.from({ length: Math.min(end - start + 1, 100) }, (_, i) => start + i);
-      const scanResults = await invoke<PortScanResult[]>('scan_ports', { target: target.trim(), ports });
+      const scanResults = await tauriClient.scanPorts(target.trim(), ports);
       setResults(scanResults);
     } catch (error) {
       console.error('Scan failed:', error);
@@ -264,10 +271,10 @@ function PortScanTool() {
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-      <div className="bg-bg-secondary border border-theme rounded-lg p-4">
+      <div className={CARD + ' p-5'}>
         <div className="flex items-center gap-2 mb-3">
-          <Hash className="w-4 h-4 text-accent-purple" />
-          <h2 className="text-sm font-bold text-text-primary">Configuration</h2>
+          <Hash className="w-4 h-4 text-accent-blue" />
+          <h2 className="text-lg font-bold text-text-primary">Configuration</h2>
         </div>
 
         <div className="space-y-3">
@@ -278,7 +285,7 @@ function PortScanTool() {
               placeholder="192.168.1.1"
               value={target}
               onChange={(e) => setTarget(e.target.value)}
-              className="w-full px-3 py-2 bg-bg-tertiary border border-theme rounded text-sm text-text-primary focus:outline-none focus:border-accent-purple"
+              className="w-full px-3 py-2 bg-bg-tertiary border border-theme rounded text-sm text-text-primary focus:outline-none focus:border-accent-blue"
             />
           </div>
 
@@ -289,7 +296,7 @@ function PortScanTool() {
                 type="number"
                 value={startPort}
                 onChange={(e) => setStartPort(e.target.value)}
-                className="w-full px-3 py-2 bg-bg-tertiary border border-theme rounded text-sm text-text-primary focus:outline-none focus:border-accent-purple"
+                className="w-full px-3 py-2 bg-bg-tertiary border border-theme rounded text-sm text-text-primary focus:outline-none focus:border-accent-blue"
               />
             </div>
             <div>
@@ -298,7 +305,7 @@ function PortScanTool() {
                 type="number"
                 value={endPort}
                 onChange={(e) => setEndPort(e.target.value)}
-                className="w-full px-3 py-2 bg-bg-tertiary border border-theme rounded text-sm text-text-primary focus:outline-none focus:border-accent-purple"
+                className="w-full px-3 py-2 bg-bg-tertiary border border-theme rounded text-sm text-text-primary focus:outline-none focus:border-accent-blue"
               />
             </div>
           </div>
@@ -306,15 +313,15 @@ function PortScanTool() {
           <button
             onClick={handleScan}
             disabled={loading || !target.trim()}
-            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-accent-purple to-indigo-600 text-white rounded font-bold text-sm shadow-lg shadow-accent-purple/30 transition-all disabled:opacity-50"
+            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-accent-blue to-accent-sapphire text-white rounded font-bold text-sm shadow-lg shadow-accent-blue/30 transition-all disabled:opacity-50"
           >
             {loading ? <><Loader2 className="w-4 h-4 animate-spin" />Scanning...</> : <><Play className="w-4 h-4" />Start Scan</>}
           </button>
         </div>
       </div>
 
-      <div className="bg-bg-secondary border border-theme rounded-lg p-4">
-        <h3 className="text-xs font-bold text-text-secondary uppercase mb-2">Results {openPorts.length > 0 && `(${openPorts.length} open)`}</h3>
+      <div className={CARD + ' p-5'}>
+        <h3 className="text-sm font-semibold text-text-primary mb-2">Results {openPorts.length > 0 && `(${openPorts.length} open)`}</h3>
         <div className="h-56 overflow-y-auto space-y-1">
           {openPorts.length === 0 && !loading && (
             <div className="flex items-center justify-center h-full text-text-muted text-xs">No open ports found</div>
@@ -345,7 +352,7 @@ function MACLookupTool() {
     setResult(null);
 
     try {
-      const lookupResult = await invoke<VendorLookupResult>('lookup_mac_vendor', { mac: mac.trim() });
+      const lookupResult = await tauriClient.lookupMacVendor(mac.trim());
       setResult(lookupResult);
     } catch (error) {
       console.error('Lookup failed:', error);
@@ -356,10 +363,10 @@ function MACLookupTool() {
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-      <div className="bg-bg-secondary border border-theme rounded-lg p-4">
+      <div className={CARD + ' p-5'}>
         <div className="flex items-center gap-2 mb-3">
-          <Network className="w-4 h-4 text-accent-purple" />
-          <h2 className="text-sm font-bold text-text-primary">Configuration</h2>
+          <Network className="w-4 h-4 text-accent-blue" />
+          <h2 className="text-lg font-bold text-text-primary">Configuration</h2>
         </div>
 
         <div className="space-y-3">
@@ -371,14 +378,14 @@ function MACLookupTool() {
               value={mac}
               onChange={(e) => setMac(e.target.value)}
               onKeyPress={(e) => e.key === 'Enter' && handleLookup()}
-              className="w-full px-3 py-2 bg-bg-tertiary border border-theme rounded text-sm font-mono text-text-primary focus:outline-none focus:border-accent-purple"
+              className="w-full px-3 py-2 bg-bg-tertiary border border-theme rounded text-sm font-mono text-text-primary focus:outline-none focus:border-accent-blue"
             />
           </div>
 
           <button
             onClick={handleLookup}
             disabled={loading || !mac.trim()}
-            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-accent-purple to-indigo-600 text-white rounded font-bold text-sm shadow-lg shadow-accent-purple/30 transition-all disabled:opacity-50"
+            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-accent-blue to-accent-sapphire text-white rounded font-bold text-sm shadow-lg shadow-accent-blue/30 transition-all disabled:opacity-50"
           >
             {loading ? <><Loader2 className="w-4 h-4 animate-spin" />Looking up...</> : <><Search className="w-4 h-4" />Lookup</>}
           </button>
@@ -390,8 +397,8 @@ function MACLookupTool() {
         </div>
       </div>
 
-      <div className="bg-bg-secondary border border-theme rounded-lg p-4">
-        <h3 className="text-xs font-bold text-text-secondary uppercase mb-2">Vendor Information</h3>
+      <div className={CARD + ' p-5'}>
+        <h3 className="text-sm font-semibold text-text-primary mb-2">Vendor Information</h3>
         {!result ? (
           <div className="flex items-center justify-center h-32 text-text-muted text-xs">Enter MAC to lookup</div>
         ) : result.is_randomized ? (

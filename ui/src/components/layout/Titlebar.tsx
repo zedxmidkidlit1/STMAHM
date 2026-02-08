@@ -22,7 +22,6 @@ export default function Titlebar({ transparent = false }: TitlebarProps) {
         const appWindow = getCurrentWindow();
         const maximized = await appWindow.isMaximized();
         setIsMaximized(maximized);
-        console.log('[Titlebar] Initial maximize state:', maximized);
       } catch (error) {
         console.error('[Titlebar] Failed to check window state:', error);
       }
@@ -34,7 +33,6 @@ export default function Titlebar({ transparent = false }: TitlebarProps) {
   const handleMinimize = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    console.log('[Titlebar] Minimize clicked');
     try {
       const appWindow = getCurrentWindow();
       appWindow.minimize();
@@ -46,13 +44,11 @@ export default function Titlebar({ transparent = false }: TitlebarProps) {
   const handleMaximize = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    console.log('[Titlebar] Maximize clicked');
     try {
       const appWindow = getCurrentWindow();
       await appWindow.toggleMaximize();
       const maximized = await appWindow.isMaximized();
       setIsMaximized(maximized);
-      console.log('[Titlebar] New maximize state:', maximized);
     } catch (error) {
       console.error('[Titlebar] Failed to maximize:', error);
     }
@@ -61,7 +57,6 @@ export default function Titlebar({ transparent = false }: TitlebarProps) {
   const handleClose = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    console.log('[Titlebar] Close clicked');
     try {
       const appWindow = getCurrentWindow();
       appWindow.close();

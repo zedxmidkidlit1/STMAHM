@@ -24,7 +24,7 @@ export default function CircularProgress({
   value,
   size = 120,
   strokeWidth = 8,
-  color = '#4f46e5', // Professional indigo
+  color = '#0ea5e9', // Mission-control blue
   label,
   icon,
   className = '',

@@ -27,8 +27,8 @@ export default function NetworkHealthCard({
   };
 
   const getGradientStops = () => {
-    if (score >= 80) return ['#10B981', '#3B82F6', '#8B5CF6'];
-    if (score >= 60) return ['#F59E0B', '#3B82F6', '#8B5CF6'];
+    if (score >= 80) return ['#10B981', '#3B82F6', '#0EA5E9'];
+    if (score >= 60) return ['#F59E0B', '#3B82F6', '#0EA5E9'];
     return ['#EF4444', '#F59E0B', '#3B82F6'];
   };
 
@@ -37,7 +37,7 @@ export default function NetworkHealthCard({
   const metrics = [
     { icon: Activity, label: 'Uptime', value: uptime, color: '#10B981', delay: 0.4 },
     { icon: TrendingUp, label: 'Packet Loss', value: packetLossPercent, color: '#3B82F6', delay: 0.5 },
-    { icon: Shield, label: 'Security', value: security, color: '#8B5CF6', delay: 0.6 },
+    { icon: Shield, label: 'Security', value: security, color: '#0EA5E9', delay: 0.6 },
     { icon: Zap, label: 'Stability', value: stability, color: '#F59E0B', delay: 0.7 },
   ];
 

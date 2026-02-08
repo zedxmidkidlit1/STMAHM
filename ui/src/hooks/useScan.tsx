@@ -2,58 +2,24 @@
  * React hook for managing network scan state and Tauri integration
  */
 
-import { useState, useCallback, useEffect, createContext, useContext, ReactNode } from 'react';
-import { invoke } from '@tauri-apps/api/core';
+import {
+  useState,
+  useCallback,
+  createContext,
+  useContext,
+  ReactNode,
+  useRef,
+} from "react";
+import { tauriClient } from "../lib/api/tauri-client";
+import type {
+  HostInfo,
+  PortWarning,
+  ScanResult,
+  VulnerabilityInfo,
+} from "../lib/api/types";
+import { isTauri } from "../lib/runtime/is-tauri";
 
-// Types matching Rust ScanResult
-export interface VulnerabilityInfo {
-  cve_id: string;
-  description: string;
-  severity: string;
-  cvss_score?: number;
-}
-
-export interface PortWarning {
-  port: number;
-  service: string;
-  warning: string;
-  severity: string;
-  recommendation?: string;
-}
-
-export interface HostInfo {
-  ip: string;
-  mac: string;
-  vendor?: string;
-  is_randomized?: boolean;
-  response_time_ms?: number | null;
-  ttl?: number;
-  os_guess?: string;
-  device_type: string;
-  risk_score: number;
-  open_ports?: number[];
-  discovery_method: string;
-  hostname?: string;
-  system_description?: string;
-  uptime_seconds?: number;
-  vulnerabilities?: VulnerabilityInfo[];
-  port_warnings?: PortWarning[];
-  security_grade?: string;
-  last_seen?: string; // ISO timestamp of last detection
-}
-
-export interface ScanResult {
-  interface_name: string;
-  local_ip: string;
-  local_mac: string;
-  subnet: string;
-  scan_method: string;
-  arp_discovered: number;
-  icmp_discovered: number;
-  total_hosts: number;
-  scan_duration_ms: number;
-  active_hosts: HostInfo[];
-}
+export type { HostInfo, PortWarning, ScanResult, VulnerabilityInfo };
 
 export type ScanStatus = 'ready' | 'scanning' | 'complete';
 
@@ -63,18 +29,6 @@ export interface ScanState {
   scanResult: ScanResult | null;
   error: string | null;
   lastScanTime: Date | null;
-}
-
-/**
- * Check if running in Tauri environment (supports v1 and v2)
- */
-function isTauri(): boolean {
-  if (typeof window === 'undefined') return false;
-  
-  // Tauri v2 uses __TAURI_INTERNALS__
-  // Tauri v1 uses __TAURI__
-  // @ts-ignore - These globals are injected by Tauri
-  return '__TAURI_INTERNALS__' in window || '__TAURI__' in window;
 }
 
 /**
@@ -88,73 +42,92 @@ export function useScan() {
     error: null,
     lastScanTime: null,
   });
-
-  const [tauriAvailable, setTauriAvailable] = useState(false);
-
-  // Check Tauri availability on mount
-  useEffect(() => {
-    setTauriAvailable(isTauri());
-  }, []);
+  const activeScanIdRef = useRef(0);
+  const tauriAvailable = isTauri();
 
   // Perform a network scan
   const scan = useCallback(async () => {
+    if (state.isScanning) {
+      return;
+    }
+
+    activeScanIdRef.current += 1;
+    const currentScanId = activeScanIdRef.current;
+
     // Check if demo mode is enabled
-    const isDemoMode = localStorage.getItem('demo-mode-enabled') === 'true';
-    
-    // Always try to invoke - if it fails, we'll catch the error
-    setState(prev => ({
+    const isDemoMode = localStorage.getItem("demo-mode-enabled") === "true";
+
+    setState((prev) => ({
       ...prev,
       isScanning: true,
-      scanStatus: 'scanning',
+      scanStatus: "scanning",
       error: null,
     }));
 
     try {
-      // Use mock scan in demo mode, real scan otherwise
-      const command = isDemoMode ? 'mock_scan_network' : 'scan_network';
-      const result = await invoke<ScanResult>(command);
-      
-      // Show "Scan Complete!" state
+      const result = isDemoMode
+        ? await tauriClient.mockScanNetwork()
+        : await tauriClient.scanNetwork();
+
+      if (currentScanId !== activeScanIdRef.current) {
+        return;
+      }
+
       setState({
         isScanning: false,
-        scanStatus: 'complete',
+        scanStatus: "complete",
         scanResult: result,
         error: null,
         lastScanTime: new Date(),
       });
 
-      // After 1 second, return to ready state
       setTimeout(() => {
-        setState(prev => ({
+        if (currentScanId !== activeScanIdRef.current) {
+          return;
+        }
+
+        setState((prev) => ({
           ...prev,
-          scanStatus: 'ready',
+          scanStatus: "ready",
         }));
       }, 1000);
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : String(err);
-      
-      // Check if it's a Tauri-specific error
-      if (errorMessage.includes('invoke') || errorMessage.includes('__TAURI__')) {
-        setState(prev => ({
-          ...prev,
-          isScanning: false,
-          scanStatus: 'ready',
-          error: 'Not running in Tauri environment. Please run with `npm run tauri dev`.',
-        }));
-      } else {
-        setState(prev => ({
-          ...prev,
-          isScanning: false,
-          scanStatus: 'ready',
-          error: errorMessage,
-        }));
+      if (currentScanId !== activeScanIdRef.current) {
+        return;
       }
+
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      setState((prev) => ({
+        ...prev,
+        isScanning: false,
+        scanStatus: "ready",
+        error: tauriAvailable
+          ? errorMessage
+          : "Not running in Tauri environment. Please run with `npm run tauri dev`.",
+      }));
     }
-  }, []);
+  }, [state.isScanning, tauriAvailable]);
+
+  const stopScan = useCallback(() => {
+    if (!state.isScanning) {
+      return;
+    }
+
+    // Backend scan command is currently non-cancellable.
+    // We cancel the active UI request and ignore stale results.
+    activeScanIdRef.current += 1;
+    setState((prev) => ({
+      ...prev,
+      isScanning: false,
+      scanStatus: "ready",
+      error: null,
+    }));
+  }, [state.isScanning]);
 
   return {
     ...state,
     scan,
+    stopScan,
     tauriAvailable,
   };
 }
@@ -164,6 +137,7 @@ export function useScan() {
  */
 interface ScanContextType extends ScanState {
   scan: () => Promise<void>;
+  stopScan: () => void;
   tauriAvailable: boolean;
 }
 

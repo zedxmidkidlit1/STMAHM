@@ -46,7 +46,7 @@ function generateEvent(devices: string[]): NetworkEvent {
         'Database sync from {source}',
         '{source} backup initiated',
       ],
-      color: '#8B5CF6',
+      color: '#14B8A6',
     },
     {
       type: 'connection' as const,

@@ -31,7 +31,7 @@ export default function AdminProfile({
               className="w-10 h-10 rounded-full object-cover border-2 border-bg-tertiary"
             />
           ) : (
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-accent-blue to-accent-purple flex items-center justify-center">
+            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-accent-blue to-accent-sapphire flex items-center justify-center">
               <User className="w-5 h-5 text-white" />
             </div>
           )}
@@ -44,7 +44,7 @@ export default function AdminProfile({
                             opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none
                             whitespace-nowrap text-sm shadow-lg z-50">
               <p className="text-text-primary font-semibold">{name}</p>
-              <span className="text-xs text-accent-purple">{license}</span>
+              <span className="text-xs text-accent-blue">{license}</span>
             </div>
           )}
         </div>
@@ -63,7 +63,7 @@ export default function AdminProfile({
                 <p className="text-sm font-semibold text-text-primary truncate">
                   {name}
                 </p>
-                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-accent-purple/10 text-accent-purple">
+                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-accent-blue/10 text-accent-blue">
                   {license}
                 </span>
               </motion.div>

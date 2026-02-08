@@ -27,7 +27,7 @@ export default function BandwidthChart({ data = mockData }: BandwidthChartProps)
       return (
         <div className="bg-bg-secondary border border-theme rounded-lg px-3 py-2 shadow-lg">
           <p className="text-xs text-text-muted mb-1">{payload[0].payload.time}</p>
-          <p className="text-sm font-semibold text-accent-purple">
+          <p className="text-sm font-semibold text-accent-blue">
             {payload[0].value} Mbps
           </p>
         </div>
@@ -61,7 +61,7 @@ export default function BandwidthChart({ data = mockData }: BandwidthChartProps)
           <BarChart data={data} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
             <defs>
               <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#8B5CF6" stopOpacity={0.9} />
+                <stop offset="0%" stopColor="#0EA5E9" stopOpacity={0.9} />
                 <stop offset="100%" stopColor="#3B82F6" stopOpacity={0.6} />
               </linearGradient>
             </defs>
@@ -102,7 +102,7 @@ export default function BandwidthChart({ data = mockData }: BandwidthChartProps)
         </div>
         <div>
           <p className="text-xs text-text-muted mb-1">Current</p>
-          <p className="text-lg font-bold text-accent-purple">48 <span className="text-xs font-normal text-text-muted">Mbps</span></p>
+          <p className="text-lg font-bold text-accent-blue">48 <span className="text-xs font-normal text-text-muted">Mbps</span></p>
         </div>
       </div>
     </motion.div>

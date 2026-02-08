@@ -5,10 +5,10 @@
  */
 
 import { useState, useCallback } from 'react';
-import { invoke } from '@tauri-apps/api/core';
 import { save } from '@tauri-apps/plugin-dialog';
 import { writeFile } from '@tauri-apps/plugin-fs';
-import { HostInfo, ScanResult } from './useScan';
+import type { HostInfo, ScanResult } from '../lib/api/types';
+import { tauriClient } from '../lib/api/tauri-client';
 
 export type ExportType = 
   | 'devices-csv' 
@@ -37,6 +37,11 @@ interface UseExportReturn {
   error: string | null;
 }
 
+interface SaveFilter {
+  name: string;
+  extensions: string[];
+}
+
 export function useExport(): UseExportReturn {
   const [exportingType, setExportingType] = useState<ExportType>(null);
   const [error, setError] = useState<string | null>(null);
@@ -44,7 +49,7 @@ export function useExport(): UseExportReturn {
   /**
    * Save text content to file
    */
-  const saveTextFile = useCallback(async (content: string, defaultFilename: string, filters: any[]) => {
+  const saveTextFile = useCallback(async (content: string, defaultFilename: string, filters: SaveFilter[]) => {
     try {
       const filePath = await save({
         defaultPath: defaultFilename,
@@ -58,10 +63,7 @@ export function useExport(): UseExportReturn {
       const encoder = new TextEncoder();
       const data = encoder.encode(content);
       await writeFile(filePath, data);
-
-      console.log(`✅ File saved: ${filePath}`);
     } catch (err) {
-      console.error('Failed to save file:', err);
       throw err;
     }
   }, []);
@@ -69,7 +71,7 @@ export function useExport(): UseExportReturn {
   /**
    * Save binary content (PDF) to file
    */
-  const saveBinaryFile = useCallback(async (data: Uint8Array, defaultFilename: string, filters: any[]) => {
+  const saveBinaryFile = useCallback(async (data: Uint8Array, defaultFilename: string, filters: SaveFilter[]) => {
     try {
       const filePath = await save({
         defaultPath: defaultFilename,
@@ -81,10 +83,7 @@ export function useExport(): UseExportReturn {
       }
 
       await writeFile(filePath, data);
-
-      console.log(`✅ PDF saved: ${filePath}`);
     } catch (err) {
-      console.error('Failed to save PDF:', err);
       throw err;
     }
   }, []);
@@ -97,7 +96,7 @@ export function useExport(): UseExportReturn {
     setError(null);
 
     try {
-      const csv: string = await invoke('export_devices_to_csv');
+      const csv = await tauriClient.exportDevicesToCsv();
       
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
       await saveTextFile(
@@ -105,9 +104,8 @@ export function useExport(): UseExportReturn {
         `network-devices-${timestamp}.csv`,
         [{ name: 'CSV', extensions: ['csv'] }]
       );
-    } catch (err: any) {
-      setError(err?.message || 'Failed to export devices CSV');
-      console.error('Export devices CSV error:', err);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to export devices CSV');
     } finally {
       setExportingType(null);
     }
@@ -121,7 +119,7 @@ export function useExport(): UseExportReturn {
     setError(null);
 
     try {
-      const csv: string = await invoke('export_scan_to_csv', { hosts });
+      const csv = await tauriClient.exportScanToCsv(hosts);
       
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
       await saveTextFile(
@@ -129,9 +127,8 @@ export function useExport(): UseExportReturn {
         `scan-results-${timestamp}.csv`,
         [{ name: 'CSV', extensions: ['csv'] }]
       );
-    } catch (err: any) {
-      setError(err?.message || 'Failed to export scan CSV');
-      console.error('Export scan CSV error:', err);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to export scan CSV');
     } finally {
       setExportingType(null);
     }
@@ -145,7 +142,7 @@ export function useExport(): UseExportReturn {
     setError(null);
 
     try {
-      const json: string = await invoke('export_topology_to_json', { hosts, network });
+      const json = await tauriClient.exportTopologyToJson(hosts, network);
       
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
       await saveTextFile(
@@ -153,9 +150,8 @@ export function useExport(): UseExportReturn {
         `topology-${timestamp}.json`,
         [{ name: 'JSON', extensions: ['json'] }]
       );
-    } catch (err: any) {
-      setError(err?.message || 'Failed to export topology JSON');
-      console.error('Export topology JSON error:', err);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to export topology JSON');
     } finally {
       setExportingType(null);
     }
@@ -169,7 +165,7 @@ export function useExport(): UseExportReturn {
     setError(null);
 
     try {
-      const json: string = await invoke('export_scan_to_json', { scan });
+      const json = await tauriClient.exportScanToJson(scan);
       
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
       await saveTextFile(
@@ -177,9 +173,8 @@ export function useExport(): UseExportReturn {
         `scan-${timestamp}.json`,
         [{ name: 'JSON', extensions: ['json'] }]
       );
-    } catch (err: any) {
-      setError(err?.message || 'Failed to export scan JSON');
-      console.error('Export scan JSON error:', err);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to export scan JSON');
     } finally {
       setExportingType(null);
     }
@@ -193,7 +188,7 @@ export function useExport(): UseExportReturn {
     setError(null);
 
     try {
-      const pdfBytes: number[] = await invoke('export_scan_report', { scan, hosts });
+      const pdfBytes = await tauriClient.exportScanReport(scan, hosts);
       const pdfData = new Uint8Array(pdfBytes);
       
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
@@ -202,9 +197,8 @@ export function useExport(): UseExportReturn {
         `network-scan-report-${timestamp}.pdf`,
         [{ name: 'PDF', extensions: ['pdf'] }]
       );
-    } catch (err: any) {
-      setError(err?.message || 'Failed to export scan report PDF');
-      console.error('Export scan report PDF error:', err);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to export scan report PDF');
     } finally {
       setExportingType(null);
     }
@@ -218,7 +212,7 @@ export function useExport(): UseExportReturn {
     setError(null);
 
     try {
-      const pdfBytes: number[] = await invoke('export_security_report', { hosts });
+      const pdfBytes = await tauriClient.exportSecurityReport(hosts);
       const pdfData = new Uint8Array(pdfBytes);
       
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
@@ -227,9 +221,8 @@ export function useExport(): UseExportReturn {
         `security-report-${timestamp}.pdf`,
         [{ name: 'PDF', extensions: ['pdf'] }]
       );
-    } catch (err: any) {
-      setError(err?.message || 'Failed to export security report PDF');
-      console.error('Export security report PDF error:', err);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to export security report PDF');
     } finally {
       setExportingType(null);
     }

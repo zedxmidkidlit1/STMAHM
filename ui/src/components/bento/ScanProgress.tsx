@@ -67,7 +67,7 @@ export default function ScanProgress({
         </div>
         <div className="h-2 bg-[var(--color-bg-tertiary)] rounded-full overflow-hidden">
           <div
-            className="h-full bg-gradient-to-r from-accent-blue to-accent-purple transition-all duration-300 rounded-full"
+            className="h-full bg-gradient-to-r from-accent-blue to-accent-teal transition-all duration-300 rounded-full"
             style={{ width: `${progress}%` }}
           />
         </div>

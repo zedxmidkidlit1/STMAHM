@@ -25,7 +25,7 @@ export default function TopologyControls({
     }
     
     if (isActive) {
-      return `${base} bg-indigo-500/15 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-300`;
+      return `${base} bg-cyan-500/15 dark:bg-cyan-500/20 text-cyan-600 dark:text-cyan-300`;
     }
     
     return `${base} bg-transparent text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700/50`;

@@ -27,14 +27,14 @@ const variantStyles = {
     glow: 'hover:shadow-lg hover:shadow-slate-200/50 dark:hover:shadow-[0_0_24px_rgba(71,85,105,0.2)]',
   },
   blue: {
-    bg: 'bg-gradient-to-br from-white to-indigo-50/50 dark:bg-slate-900/75 dark:from-slate-900/75 dark:to-slate-900/75',
-    border: 'border-indigo-100 dark:border-indigo-500/30',
-    glow: 'hover:shadow-lg hover:shadow-indigo-100/50 dark:hover:shadow-[0_0_24px_rgba(79,70,229,0.25)]',
+    bg: 'bg-gradient-to-br from-white to-cyan-50/50 dark:bg-slate-900/75 dark:from-slate-900/75 dark:to-slate-900/75',
+    border: 'border-cyan-100 dark:border-cyan-500/30',
+    glow: 'hover:shadow-lg hover:shadow-cyan-100/50 dark:hover:shadow-[0_0_24px_rgba(14,165,233,0.25)]',
   },
   purple: {
-    bg: 'bg-gradient-to-br from-white to-violet-50/50 dark:bg-slate-900/75 dark:from-slate-900/75 dark:to-slate-900/75',
-    border: 'border-violet-100 dark:border-violet-500/30',
-    glow: 'hover:shadow-lg hover:shadow-violet-100/50 dark:hover:shadow-[0_0_24px_rgba(124,58,237,0.25)]',
+    bg: 'bg-gradient-to-br from-white to-sky-50/50 dark:bg-slate-900/75 dark:from-slate-900/75 dark:to-slate-900/75',
+    border: 'border-sky-100 dark:border-sky-500/30',
+    glow: 'hover:shadow-lg hover:shadow-sky-100/50 dark:hover:shadow-[0_0_24px_rgba(2,132,199,0.25)]',
   },
   green: {
     bg: 'bg-gradient-to-br from-white to-teal-50/50 dark:bg-slate-900/75 dark:from-slate-900/75 dark:to-slate-900/75',

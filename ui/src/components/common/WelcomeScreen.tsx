@@ -25,7 +25,7 @@ export default function WelcomeScreen({ onStartScan, isScanning = false }: Welco
 
   return (
     <motion.div
-      className="fixed inset-0 z-[200] flex flex-col bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50 overflow-hidden"
+      className="fixed inset-0 z-[200] flex flex-col bg-gradient-to-br from-slate-50 via-cyan-50 to-blue-50 overflow-hidden"
       initial={{ opacity: 1 }}
       animate={{ opacity: isExiting ? 0 : 1 }}
       transition={{ duration: 0.3 }}
@@ -40,7 +40,7 @@ export default function WelcomeScreen({ onStartScan, isScanning = false }: Welco
       {/* Animated Background Orbs - premium light gradient */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
         <motion.div
-          className="absolute w-96 h-96 rounded-full bg-gradient-to-br from-blue-200/40 to-purple-200/40 blur-3xl"
+          className="absolute w-96 h-96 rounded-full bg-gradient-to-br from-blue-200/40 to-cyan-200/40 blur-3xl"
           style={{ top: '10%', left: '20%' }}
           animate={{
             scale: [1, 1.2, 1],
@@ -53,7 +53,7 @@ export default function WelcomeScreen({ onStartScan, isScanning = false }: Welco
           }}
         />
         <motion.div
-          className="absolute w-96 h-96 rounded-full bg-gradient-to-br from-purple-200/40 to-pink-200/40 blur-3xl"
+          className="absolute w-96 h-96 rounded-full bg-gradient-to-br from-cyan-200/40 to-teal-200/40 blur-3xl"
           style={{ bottom: '10%', right: '20%' }}
           animate={{
             scale: [1.2, 1, 1.2],
@@ -86,9 +86,9 @@ export default function WelcomeScreen({ onStartScan, isScanning = false }: Welco
       <div className="relative z-10 max-w-2xl px-8 text-center">
         {/* Floating Logo/Icon - Premium Light */}
         <motion.div
-          className="w-28 h-28 mx-auto mb-8 rounded-3xl bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 flex items-center justify-center"
+          className="w-28 h-28 mx-auto mb-8 rounded-3xl bg-gradient-to-br from-blue-500 via-sky-500 to-teal-500 flex items-center justify-center"
           style={{
-            boxShadow: '0 20px 60px rgba(59, 130, 246, 0.3), 0 10px 40px rgba(139, 92, 246, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.3)',
+            boxShadow: '0 20px 60px rgba(59, 130, 246, 0.3), 0 10px 40px rgba(14, 165, 233, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.3)',
           }}
           animate={{
             y: [0, -15, 0],
@@ -105,7 +105,7 @@ export default function WelcomeScreen({ onStartScan, isScanning = false }: Welco
 
         {/* App Name - Premium Typography */}
         <div className="mb-6">
-          <h1 className="text-6xl font-bold bg-gradient-to-r from-slate-800 via-blue-700 to-purple-700 bg-clip-text text-transparent mb-3 tracking-tight leading-tight">
+          <h1 className="text-6xl font-bold bg-gradient-to-r from-slate-800 via-blue-700 to-cyan-700 bg-clip-text text-transparent mb-3 tracking-tight leading-tight">
             Network Topology Mapper
           </h1>
           <p className="text-xl text-slate-600 font-medium">
@@ -144,11 +144,11 @@ export default function WelcomeScreen({ onStartScan, isScanning = false }: Welco
             disabled={isScanning || isExiting}
             whileHover={{ scale: 1.05, y: -3 }}
             whileTap={{ scale: 0.95 }}
-            className="relative px-16 py-6 rounded-2xl bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 text-white font-bold text-xl transition-all duration-300 overflow-hidden group disabled:opacity-50 disabled:cursor-not-allowed"
+            className="relative px-16 py-6 rounded-2xl bg-gradient-to-r from-blue-600 via-sky-600 to-teal-600 text-white font-bold text-xl transition-all duration-300 overflow-hidden group disabled:opacity-50 disabled:cursor-not-allowed"
             style={{
               boxShadow: isScanning
                 ? '0 10px 40px rgba(59, 130, 246, 0.3)'
-                : '0 15px 50px rgba(59, 130, 246, 0.4), 0 10px 30px rgba(139, 92, 246, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2)',
+                : '0 15px 50px rgba(59, 130, 246, 0.4), 0 10px 30px rgba(14, 165, 233, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2)',
             }}
           >
             {/* Animated gradient overlay */}

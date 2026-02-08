@@ -1,28 +1,18 @@
 /**
- * Tauri API hooks for communicating with the Rust backend
+ * Compatibility wrappers.
+ * Prefer using `tauriClient` directly in new code.
  */
 
-import { invoke } from '@tauri-apps/api/core';
-import type { ScanResult } from '../hooks/useScan';
+import { tauriClient } from "./api/tauri-client";
+import type { ScanResult } from "./api/types";
+import { isTauri } from "./runtime/is-tauri";
 
-/**
- * Perform a network scan
- * Calls the Rust scanner via Tauri
- */
 export async function scanNetwork(): Promise<ScanResult> {
-  return invoke<ScanResult>('scan_network');
+  return tauriClient.scanNetwork();
 }
 
-/**
- * Get available network interfaces
- */
 export async function getInterfaces(): Promise<string[]> {
-  return invoke<string[]>('get_interfaces');
+  return tauriClient.getInterfaces();
 }
 
-/**
- * Check if running in Tauri environment
- */
-export function isTauri(): boolean {
-  return '__TAURI__' in window;
-}
+export { isTauri };

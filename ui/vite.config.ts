@@ -28,5 +28,21 @@ export default defineConfig({
     target: 'esnext',
     minify: !process.env.TAURI_DEBUG ? 'esbuild' : false,
     sourcemap: !!process.env.TAURI_DEBUG,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor_motion: ['framer-motion'],
+          vendor_charts: ['recharts'],
+          vendor_flow: ['@xyflow/react', 'dagre'],
+          vendor_tauri: [
+            '@tauri-apps/api',
+            '@tauri-apps/plugin-dialog',
+            '@tauri-apps/plugin-fs',
+            '@tauri-apps/plugin-os',
+            '@tauri-apps/plugin-shell',
+          ],
+        },
+      },
+    },
   },
 });

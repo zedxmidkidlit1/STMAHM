@@ -1,18 +1,10 @@
 import { Bell } from 'lucide-react';
 import { useState, useEffect } from 'react';
-import { invoke } from '@tauri-apps/api/core';
 import clsx from 'clsx';
+import { tauriClient } from '../../lib/api/tauri-client';
+import type { AlertRecord } from '../../lib/api/types';
 
-export interface Alert {
-  id: number;
-  created_at: string;
-  alert_type: string;
-  device_mac: string | null;
-  device_ip: string | null;
-  message: string;
-  severity: string;
-  is_read: boolean;
-}
+export type Alert = AlertRecord;
 
 interface AlertBadgeProps {
   onClick: () => void;
@@ -28,7 +20,7 @@ export default function AlertBadge({ onClick, className }: AlertBadgeProps) {
     
     try {
       setIsLoading(true);
-      const alerts = await invoke<Alert[]>('get_unread_alerts');
+      const alerts = await tauriClient.getUnreadAlerts();
       setUnreadCount(alerts.length);
     } catch (error) {
       console.error('Failed to load alerts:', error);

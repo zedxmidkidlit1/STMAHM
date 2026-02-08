@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Save, RefreshCw, Activity, Network, Zap, Shield, Clock, Hash, ChevronDown, ChevronUp, Radio } from 'lucide-react';
 import { useMonitoring } from '../hooks/useMonitoring';
+import { tauriClient } from '../lib/api/tauri-client';
 
 // Default settings
 const DEFAULT_SETTINGS = {
@@ -13,6 +14,8 @@ const DEFAULT_SETTINGS = {
 };
 
 const SETTINGS_KEY = 'netmapper-settings';
+const PANEL =
+  'rounded-2xl border border-slate-200/70 bg-white/85 backdrop-blur-sm shadow-sm dark:border-slate-800 dark:bg-slate-950/65';
 
 function loadSettings() {
   try {
@@ -42,7 +45,7 @@ function Toggle({ enabled, onToggle }: { enabled: boolean; onToggle: () => void 
     <button
       onClick={onToggle}
       className={`relative w-12 h-6 rounded-full transition-colors ${
-        enabled ? 'bg-accent-purple' : 'bg-gray-300 dark:bg-gray-600'
+        enabled ? 'bg-accent-blue' : 'bg-gray-300 dark:bg-gray-600'
       }`}
     >
       <div
@@ -70,9 +73,13 @@ export default function Settings() {
   const [syncRange, setSyncRange] = useState('latest_1000');
   const [vulnDBExpanded, setVulnDBExpanded] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [syncNotice, setSyncNotice] = useState<string | null>(null);
   
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
   const [hasChanges, setHasChanges] = useState(false);
+  const [interfaces, setInterfaces] = useState<string[]>([]);
+  const [dbPath, setDbPath] = useState<string | null>(null);
+  const [scanSchemaVersion, setScanSchemaVersion] = useState<string | null>(null);
 
   const embeddedCVEs = 150;
   const downloadedCVEs = 0;
@@ -87,6 +94,16 @@ export default function Settings() {
     setTcpPorts(settings.tcpPorts);
     setMonitoringEnabled(settings.monitoringEnabled || false);
     setMonitoringInterval(settings.monitoringInterval || 60);
+
+    tauriClient.getInterfaces().then(setInterfaces).catch(() => setInterfaces([]));
+    tauriClient.getDatabasePath().then(setDbPath).catch(() => setDbPath(null));
+    tauriClient
+      .getScanResultSchema()
+      .then((schema) => {
+        const version = schema?.schema_version;
+        setScanSchemaVersion(typeof version === 'string' ? version : null);
+      })
+      .catch(() => setScanSchemaVersion(null));
   }, []);
 
   // Track changes
@@ -127,7 +144,7 @@ export default function Settings() {
     setIsSyncing(true);
     setTimeout(() => {
       setIsSyncing(false);
-      alert('✅ Database sync simulated! Backend integration pending.');
+      setSyncNotice('Database sync simulation complete. Backend integration pending.');
     }, 2000);
   };
 
@@ -140,11 +157,27 @@ export default function Settings() {
   };
 
   return (
-    <div className="p-4 max-w-3xl mx-auto min-h-screen flex flex-col">
+    <div className="relative flex-1 overflow-y-auto bg-bg-primary p-4 sm:p-6 lg:p-8">
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div className="absolute -top-16 -left-16 h-80 w-80 rounded-full bg-cyan-300/15 blur-3xl dark:bg-cyan-500/10" />
+        <div className="absolute top-20 right-0 h-96 w-96 rounded-full bg-blue-300/10 blur-3xl dark:bg-blue-500/10" />
+      </div>
+
+      <div className="relative z-10 mx-auto flex w-full max-w-4xl flex-col space-y-4">
+      <div className={`${PANEL} p-5 sm:p-6`}>
+        <p className="text-xs uppercase tracking-[0.22em] text-cyan-600 dark:text-cyan-300">
+          System Configuration
+        </p>
+        <h1 className="mt-2 text-2xl font-black text-text-primary sm:text-4xl">Settings</h1>
+        <p className="mt-2 text-sm text-text-secondary sm:text-base">
+          Manage scan behavior, monitoring runtime, and local data policy for production use.
+        </p>
+      </div>
+
       {/* Configuration Section */}
-      <div className="bg-bg-secondary border border-theme rounded-xl p-6 mb-4">
+      <div className={`${PANEL} p-6`}>
         <div className="flex items-center gap-3 mb-6">
-          <Activity className="w-5 h-5 text-accent-purple" />
+          <Activity className="w-5 h-5 text-accent-blue" />
           <h2 className="text-lg font-bold text-text-primary">Configuration</h2>
         </div>
         <p className="text-sm text-text-muted mb-6">Manage scanner behavior and application preferences.</p>
@@ -153,8 +186,8 @@ export default function Settings() {
           {/* Scan Settings Card */}
           <div>
             <div className="flex items-center gap-2 mb-4">
-              <Activity className="w-4 h-4 text-accent-purple" />
-              <h3 className="text-sm font-bold text-text-primary">Scan Settings</h3>
+              <Activity className="w-4 h-4 text-accent-blue" />
+              <h3 className="text-base font-semibold text-text-primary">Scan Settings</h3>
             </div>
 
             <div className="space-y-4">
@@ -167,7 +200,7 @@ export default function Settings() {
                   <select
                     value={scanInterval}
                     onChange={(e) => setScanInterval(Number(e.target.value))}
-                    className="w-full pl-10 pr-3 py-2.5 bg-bg-tertiary border border-theme rounded-lg text-text-primary focus:outline-none focus:border-accent-purple transition-colors appearance-none cursor-pointer"
+                    className="w-full pl-10 pr-3 py-2.5 bg-bg-tertiary border border-theme rounded-lg text-text-primary focus:outline-none focus:border-accent-blue transition-colors appearance-none cursor-pointer"
                   >
                     <option value={10}>10 seconds</option>
                     <option value={30}>30 seconds</option>
@@ -190,7 +223,7 @@ export default function Settings() {
                   <textarea
                     value={tcpPorts}
                     onChange={(e) => setTcpPorts(e.target.value)}
-                    className="w-full pl-10 pr-3 py-2.5 bg-bg-tertiary border border-theme rounded-lg text-text-primary font-mono text-sm focus:outline-none focus:border-accent-purple transition-colors resize-none"
+                    className="w-full pl-10 pr-3 py-2.5 bg-bg-tertiary border border-theme rounded-lg text-text-primary font-mono text-sm focus:outline-none focus:border-accent-blue transition-colors resize-none"
                     rows={2}
                     placeholder="22, 80, 443, 8080"
                   />
@@ -198,19 +231,25 @@ export default function Settings() {
                 <p className="text-xs text-text-muted mt-1.5">Comma-separated list of ports.</p>
               </div>
             </div>
+
+            <div className="rounded-lg border border-theme bg-bg-tertiary/40 p-3 text-xs text-text-secondary">
+              <p><span className="font-semibold text-text-primary">Detected interfaces:</span> {interfaces.length > 0 ? interfaces.join(', ') : 'Not available'}</p>
+              <p className="mt-1"><span className="font-semibold text-text-primary">DB path:</span> {dbPath ?? 'Unavailable'}</p>
+              <p className="mt-1"><span className="font-semibold text-text-primary">Scan schema:</span> {scanSchemaVersion ?? 'Unavailable'}</p>
+            </div>
           </div>
         </div>
       </div>
 
       {/* SNMP Settings */}
-      <div className="bg-bg-secondary border border-theme rounded-xl p-5 mb-4">
+      <div className={`${PANEL} p-5`}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3 flex-1">
             <div className="p-2 bg-accent-blue/10 rounded-lg">
               <Network className="w-5 h-5 text-accent-blue" />
             </div>
             <div>
-              <h3 className="text-sm font-bold text-text-primary">SNMP Settings</h3>
+              <h3 className="text-base font-semibold text-text-primary">SNMP Settings</h3>
               <p className="text-xs text-text-muted mt-0.5">Enable SNMP to gather detailed device information like system description and uptime.</p>
             </div>
           </div>
@@ -219,14 +258,14 @@ export default function Settings() {
       </div>
 
       {/* Network Monitoring */}
-      <div className="bg-bg-secondary border border-theme rounded-xl p-5 mb-4">
+      <div className={`${PANEL} p-5`}>
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3 flex-1">
-            <div className="p-2 bg-accent-purple/10 rounded-lg">
-              <Radio className="w-5 h-5 text-accent-purple" />
+            <div className="p-2 bg-accent-teal/10 rounded-lg">
+              <Radio className="w-5 h-5 text-accent-teal" />
             </div>
             <div>
-              <h3 className="text-sm font-bold text-text-primary">Network Monitoring</h3>
+              <h3 className="text-base font-semibold text-text-primary">Network Monitoring</h3>
               <p className="text-xs text-text-muted mt-0.5">Auto-start real-time network monitoring on app launch.</p>
             </div>
           </div>
@@ -244,7 +283,7 @@ export default function Settings() {
                 <select
                   value={monitoringInterval}
                   onChange={(e) => setMonitoringInterval(Number(e.target.value))}
-                  className="w-full pl-10 pr-3 py-2.5 bg-bg-tertiary border border-theme rounded-lg text-text-primary focus:outline-none focus:border-accent-purple transition-colors appearance-none cursor-pointer"
+                  className="w-full pl-10 pr-3 py-2.5 bg-bg-tertiary border border-theme rounded-lg text-text-primary focus:outline-none focus:border-accent-blue transition-colors appearance-none cursor-pointer"
                 >
                   <option value={10}>10 seconds</option>
                   <option value={30}>30 seconds</option>
@@ -290,14 +329,14 @@ export default function Settings() {
       </div>
 
       {/* Demo Mode */}
-      <div className="bg-bg-secondary border border-theme rounded-xl p-5 mb-4">
+      <div className={`${PANEL} p-5`}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3 flex-1">
             <div className="p-2 bg-accent-red/10 rounded-lg">
               <Zap className="w-5 h-5 text-accent-red" />
             </div>
             <div>
-              <h3 className="text-sm font-bold text-text-primary">Demo Mode</h3>
+              <h3 className="text-base font-semibold text-text-primary">Demo Mode</h3>
               <p className="text-xs text-text-muted mt-0.5">Use mock data for demonstration.</p>
             </div>
           </div>
@@ -306,14 +345,14 @@ export default function Settings() {
       </div>
 
       {/* Vulnerability Database */}
-      <div className="bg-bg-secondary border border-theme rounded-xl p-5 mb-4">
+      <div className={`${PANEL} p-5`}>
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3 flex-1">
             <div className="p-2 bg-accent-red/10 rounded-lg">
               <Shield className="w-5 h-5 text-accent-red" />
             </div>
             <div>
-              <h3 className="text-sm font-bold text-text-primary">Vulnerability Database</h3>
+              <h3 className="text-base font-semibold text-text-primary">Vulnerability Database</h3>
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -341,7 +380,7 @@ export default function Settings() {
               <select
                 value={syncRange}
                 onChange={(e) => setSyncRange(e.target.value)}
-                className="w-full px-3 py-2.5 bg-bg-tertiary border border-theme rounded-lg text-sm text-text-primary focus:outline-none focus:border-accent-purple"
+                className="w-full px-3 py-2.5 bg-bg-tertiary border border-theme rounded-lg text-sm text-text-primary focus:outline-none focus:border-accent-blue"
               >
                 <option value="latest_1000">Latest 1,000 CVEs (~500 KB)</option>
                 <option value="latest_5000">Latest 5,000 CVEs (~2.5 MB)</option>
@@ -362,8 +401,8 @@ export default function Settings() {
                 <span className="font-bold text-text-primary">{downloadedCVEs}</span>
               </div>
               <div className="flex justify-between text-sm pt-2 border-t border-theme">
-                <span className="text-accent-purple font-semibold">Total CVEs:</span>
-                <span className="font-bold text-accent-purple">{embeddedCVEs + downloadedCVEs}</span>
+                <span className="text-accent-blue font-semibold">Total CVEs:</span>
+                <span className="font-bold text-accent-blue">{embeddedCVEs + downloadedCVEs}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-text-muted">Last Updated:</span>
@@ -378,7 +417,7 @@ export default function Settings() {
               className={`w-full flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-bold text-sm shadow-lg transition-all ${
                 isSyncing
                   ? 'bg-gray-400 cursor-not-allowed'
-                  : 'bg-gradient-to-r from-accent-purple to-indigo-600 hover:from-accent-purple/90 hover:to-indigo-600/90 text-white shadow-accent-purple/30'
+                  : 'bg-gradient-to-r from-accent-blue to-accent-sapphire hover:brightness-110 text-white shadow-accent-blue/30'
               }`}
             >
               <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin' : ''}`} />
@@ -388,6 +427,9 @@ export default function Settings() {
             <p className="text-xs text-text-muted text-center">
               💡 Vulnerability database works offline by default.
             </p>
+            {syncNotice && (
+              <p className="text-xs text-accent-blue text-center">{syncNotice}</p>
+            )}
           </div>
         )}
       </div>
@@ -396,7 +438,7 @@ export default function Settings() {
       <div className="flex items-center justify-between mt-6">
         <button
           onClick={handleReset}
-          className="flex items-center gap-2 px-4 py-2 border-2 border-theme hover:border-accent-purple rounded-lg text-text-secondary hover:text-text-primary transition-all"
+          className="flex items-center gap-2 px-4 py-2 border-2 border-theme hover:border-accent-blue rounded-lg text-text-secondary hover:text-text-primary transition-all"
         >
           <RefreshCw className="w-4 h-4" />
           <span className="text-sm font-medium">Reset to Defaults</span>
@@ -416,6 +458,7 @@ export default function Settings() {
           <Save className="w-4 h-4" />
           {saveStatus === 'saving' ? 'Saving...' : saveStatus === 'saved' ? 'Saved!' : 'Save Settings'}
         </button>
+      </div>
       </div>
     </div>
   );

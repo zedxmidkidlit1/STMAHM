@@ -58,7 +58,7 @@ export default function MonitoringPanel({ onScanComplete }: MonitoringPanelProps
       <div 
         className="absolute inset-0 pointer-events-none opacity-10"
         style={{
-          background: 'radial-gradient(ellipse 80% 50% at 50% 0%, #8B5CF620, transparent 60%)'
+          background: 'radial-gradient(ellipse 80% 50% at 50% 0%, #0EA5E920, transparent 60%)'
         }}
       />
       
@@ -66,7 +66,7 @@ export default function MonitoringPanel({ onScanComplete }: MonitoringPanelProps
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
         <h2 className="text-sm font-semibold text-text-primary flex items-center gap-2">
-          <Activity className="w-4 h-4 text-accent-purple" />
+          <Activity className="w-4 h-4 text-accent-blue" />
           Real-time Monitoring
         </h2>
         <div className="flex items-center gap-2">

@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { invoke } from '@tauri-apps/api/core';
 import { motion } from 'framer-motion';
 import {
   Bell,
@@ -10,32 +9,28 @@ import {
   Eye,
   Clock,
   Trash2,
+  RefreshCw,
 } from 'lucide-react';
+import { tauriClient } from '../lib/api/tauri-client';
+import type { AlertRecord } from '../lib/api/types';
 
-interface AlertRecord {
-  id: number;
-  created_at: string;
-  alert_type: string;
-  device_id?: number;
-  device_mac?: string;
-  device_ip?: string;
-  message: string;
-  severity: string;
-  is_read: boolean;
-}
-
-type AlertFilter = 'all' | 'critical' | 'warnings' | 'info' | 'unread';
+type AlertFilter = 'critical' | 'warnings' | 'info' | 'unread';
+const CARD =
+  'rounded-2xl border border-slate-200/70 bg-white/85 backdrop-blur-sm shadow-sm dark:border-slate-800 dark:bg-slate-950/65';
 
 export default function Alerts() {
   const [alerts, setAlerts] = useState<AlertRecord[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<AlertFilter>('all');
+  const [filter, setFilter] = useState<AlertFilter>('unread');
 
   // Load alerts
   const loadAlerts = async () => {
     setLoading(true);
     try {
-      const result = await invoke<AlertRecord[]>('get_unread_alerts');
+      const isDemoMode = localStorage.getItem('demo-mode-enabled') === 'true';
+      const result = isDemoMode
+        ? await tauriClient.getDemoAlerts()
+        : await tauriClient.getUnreadAlerts();
       setAlerts(result);
     } catch (error) {
       console.error('Failed to load alerts:', error);
@@ -51,7 +46,7 @@ export default function Alerts() {
   // Mark alert as read
   const markAsRead = async (alertId: number) => {
     try {
-      await invoke('mark_alert_read', { alertId });
+      await tauriClient.markAlertRead(alertId);
       await loadAlerts();
     } catch (error) {
       console.error('Failed to mark alert as read:', error);
@@ -61,7 +56,7 @@ export default function Alerts() {
   // Mark all as read
   const markAllAsRead = async () => {
     try {
-      await invoke('mark_all_alerts_read');
+      await tauriClient.markAllAlertsRead();
       await loadAlerts();
     } catch (error) {
       console.error('Failed to mark all alerts as read:', error);
@@ -71,7 +66,7 @@ export default function Alerts() {
   // Clear all alerts
   const clearAll = async () => {
     try {
-      await invoke('clear_all_alerts');
+      await tauriClient.clearAllAlerts();
       await loadAlerts();
     } catch (error) {
       console.error('Failed to clear alerts:', error);
@@ -91,7 +86,6 @@ export default function Alerts() {
 
   // Filter alerts
   const filteredAlerts = alerts.filter(alert => {
-    if (filter === 'all') return true;
     if (filter === 'critical') return alert.severity.toLowerCase() === 'critical';
     if (filter === 'warnings') return ['high', 'medium'].includes(alert.severity.toLowerCase());
     if (filter === 'info') return ['low', 'info'].includes(alert.severity.toLowerCase());
@@ -143,20 +137,51 @@ export default function Alerts() {
   };
 
   return (
-    <div className="p-6 lg:p-8">
-      {/* Stats Grid - 4 Column Layout */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+    <div className="relative flex-1 overflow-y-auto bg-bg-primary p-4 sm:p-6 lg:p-8">
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div className="absolute -top-16 -left-16 h-80 w-80 rounded-full bg-cyan-300/15 blur-3xl dark:bg-cyan-500/10" />
+        <div className="absolute top-20 right-0 h-96 w-96 rounded-full bg-amber-300/10 blur-3xl dark:bg-amber-500/10" />
+      </div>
+
+      <div className="relative z-10 space-y-6">
+        <motion.section
+          initial={{ opacity: 0, y: -12 }}
+          animate={{ opacity: 1, y: 0 }}
+          className={`${CARD} p-5 sm:p-6`}
+        >
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+            <div className="space-y-2">
+              <p className="text-xs uppercase tracking-[0.22em] text-cyan-600 dark:text-cyan-300">
+                Security Events
+              </p>
+              <h1 className="text-2xl font-black text-text-primary sm:text-4xl">Alert Center</h1>
+              <p className="max-w-2xl text-sm text-text-secondary sm:text-base">
+                Prioritize critical events, triage warnings, and resolve network security findings.
+              </p>
+            </div>
+            <button
+              onClick={loadAlerts}
+              className="inline-flex items-center gap-2 rounded-xl border border-slate-300/80 bg-white px-3.5 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+            >
+              <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+              Refresh
+            </button>
+          </div>
+        </motion.section>
+
+        {/* Stats Grid - 4 Column Layout */}
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
         {/* Total Alerts */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="p-6 rounded-2xl bg-gradient-to-br from-accent-blue/20 to-accent-blue/5 border border-accent-blue/20"
+          className={`${CARD} border-accent-blue/20 bg-gradient-to-br from-accent-blue/15 to-accent-blue/5 p-6`}
         >
           <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-bold uppercase tracking-wide text-accent-blue">Total Alerts</span>
+            <span className="text-sm font-bold uppercase tracking-wide text-accent-blue">Unread Alerts</span>
             <Bell className="w-6 h-6 text-accent-blue" />
           </div>
-          <p className="text-4xl font-bold text-accent-blue">{stats.total}</p>
+          <p className="text-4xl font-bold text-accent-blue">{stats.unread}</p>
         </motion.div>
 
         {/* Critical */}
@@ -164,7 +189,7 @@ export default function Alerts() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.05 }}
-          className="p-6 rounded-2xl bg-gradient-to-br from-accent-red/20 to-accent-red/5 border border-accent-red/20"
+          className={`${CARD} border-accent-red/20 bg-gradient-to-br from-accent-red/15 to-accent-red/5 p-6`}
         >
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm font-bold uppercase tracking-wide text-accent-red">Critical</span>
@@ -178,7 +203,7 @@ export default function Alerts() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="p-6 rounded-2xl bg-gradient-to-br from-accent-amber/20 to-accent-amber/5 border border-accent-amber/20"
+          className={`${CARD} border-accent-amber/20 bg-gradient-to-br from-accent-amber/15 to-accent-amber/5 p-6`}
         >
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm font-bold uppercase tracking-wide text-accent-amber">Warnings</span>
@@ -192,31 +217,21 @@ export default function Alerts() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.15 }}
-          className="p-6 rounded-2xl bg-gradient-to-br from-accent-purple/20 to-accent-purple/5 border border-accent-purple/20"
+          className={`${CARD} border-accent-teal/20 bg-gradient-to-br from-accent-teal/15 to-accent-teal/5 p-6`}
         >
           <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-bold uppercase tracking-wide text-accent-purple">Unread</span>
-            <Eye className="w-6 h-6 text-accent-purple" />
+            <span className="text-sm font-bold uppercase tracking-wide text-accent-teal">Unread</span>
+            <Eye className="w-6 h-6 text-accent-teal" />
           </div>
-          <p className="text-4xl font-bold text-accent-purple">{stats.unread}</p>
+          <p className="text-4xl font-bold text-accent-teal">{stats.unread}</p>
         </motion.div>
-      </div>
+        </div>
 
-      {/* Filters and Actions */}
-      <div className="bg-bg-secondary border border-theme rounded-xl p-4 mb-6">
+        {/* Filters and Actions */}
+        <div className={`${CARD} p-4`}>
         <div className="flex items-center justify-between gap-4 flex-wrap">
           {/* Tab Filters */}
           <div className="flex items-center gap-2">
-            <button
-              onClick={() => setFilter('all')}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                filter === 'all'
-                  ? 'bg-text-primary text-bg-primary'
-                  : 'text-text-secondary hover:text-text-primary hover:bg-bg-hover'
-              }`}
-            >
-              All
-            </button>
             <button
               onClick={() => setFilter('critical')}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
@@ -251,7 +266,7 @@ export default function Alerts() {
               onClick={() => setFilter('unread')}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
                 filter === 'unread'
-                  ? 'bg-accent-purple text-white'
+                  ? 'bg-accent-teal text-white'
                   : 'text-text-secondary hover:text-text-primary hover:bg-bg-hover'
               }`}
             >
@@ -279,17 +294,17 @@ export default function Alerts() {
             </button>
           </div>
         </div>
-      </div>
+        </div>
 
-      {/* Alert List */}
-      <div className="space-y-3">
+        {/* Alert List */}
+        <div className="space-y-3">
         {loading ? (
-          <div className="bg-bg-secondary border border-theme rounded-xl p-12 text-center">
+          <div className={`${CARD} p-12 text-center`}>
             <div className="w-12 h-12 border-4 border-accent-blue border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
             <p className="text-text-muted">Loading alerts...</p>
           </div>
         ) : filteredAlerts.length === 0 ? (
-          <div className="bg-bg-secondary border border-theme rounded-xl p-12 text-center">
+          <div className={`${CARD} p-12 text-center`}>
             <CheckCircle className="w-16 h-16 text-accent-green mx-auto mb-4" />
             <h3 className="text-xl font-bold text-text-primary mb-2">All Clear!</h3>
             <p className="text-text-muted">
@@ -308,7 +323,7 @@ export default function Alerts() {
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: index * 0.05 }}
-                className={`bg-bg-secondary border border-theme rounded-xl overflow-hidden hover:border-accent-blue/30 transition-all border-l-4 ${config.border}`}
+                className={`${CARD} overflow-hidden border-l-4 ${config.border} transition-all hover:border-accent-blue/30`}
               >
                 <div className="p-6">
                   <div className="flex items-start gap-4">
@@ -321,7 +336,7 @@ export default function Alerts() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between gap-4 mb-2">
                         <div className="flex items-center gap-3">
-                          <h3 className="font-bold text-text-primary">
+                          <h3 className="text-base font-semibold text-text-primary">
                             {alert.alert_type.split('_').map(w => 
                               w.charAt(0).toUpperCase() + w.slice(1)
                             ).join(' ')}
@@ -375,14 +390,15 @@ export default function Alerts() {
             );
           })
         )}
-      </div>
-
-      {/* Results Count */}
-      {!loading && filteredAlerts.length > 0 && (
-        <div className="mt-6 text-center text-sm text-text-muted">
-          Showing {filteredAlerts.length} of {alerts.length} alerts
         </div>
-      )}
+
+        {/* Results Count */}
+        {!loading && filteredAlerts.length > 0 && (
+          <div className="text-center text-sm text-text-muted">
+            Showing {filteredAlerts.length} of {alerts.length} unread alerts
+          </div>
+        )}
+      </div>
     </div>
   );
 }

@@ -71,7 +71,7 @@ export default function HeroStatCard({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <motion.div
-              className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-100 to-violet-100 dark:from-slate-700/40 dark:to-slate-800/40 flex items-center justify-center text-indigo-600 dark:text-slate-300 shadow-sm shadow-indigo-100 dark:shadow-none"
+              className="w-12 h-12 rounded-xl bg-gradient-to-br from-cyan-100 to-blue-100 dark:from-slate-700/40 dark:to-slate-800/40 flex items-center justify-center text-cyan-700 dark:text-slate-300 shadow-sm shadow-cyan-100 dark:shadow-none"
               whileHover={{ scale: 1.1, rotate: 5 }}
               transition={{ type: 'spring', stiffness: 400 }}
             >

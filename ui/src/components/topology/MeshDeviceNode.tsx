@@ -20,21 +20,21 @@ function MeshDeviceNode({ data, selected }: NodeProps<any>) {
 
   // Theme-aware colors
   const colors = {
-    nodeBg: isDark ? 'rgba(139, 92, 246, 0.15)' : 'rgba(139, 92, 246, 0.08)',
-    nodeBgSelected: isDark ? 'rgba(168, 85, 247, 0.3)' : 'rgba(168, 85, 247, 0.2)',
-    nodeBorder: isDark ? 'rgba(168, 85, 247, 0.5)' : 'rgba(139, 92, 246, 0.4)',
-    nodeBorderSelected: isDark ? '#A855F7' : '#8B5CF6',
-    nodeColor: isDark ? '#E9D5FF' : '#581C87',
+    nodeBg: isDark ? 'rgba(14, 165, 233, 0.15)' : 'rgba(14, 165, 233, 0.08)',
+    nodeBgSelected: isDark ? 'rgba(6, 182, 212, 0.3)' : 'rgba(6, 182, 212, 0.2)',
+    nodeBorder: isDark ? 'rgba(14, 165, 233, 0.45)' : 'rgba(14, 165, 233, 0.35)',
+    nodeBorderSelected: isDark ? '#06B6D4' : '#0EA5E9',
+    nodeColor: isDark ? '#BAE6FD' : '#0C4A6E',
     shadowDefault: isDark
-      ? '0 0 20px rgba(168, 85, 247, 0.3), 0 4px 12px rgba(0, 0, 0, 0.2)'
-      : '0 4px 12px rgba(139, 92, 246, 0.15)',
+      ? '0 0 20px rgba(14, 165, 233, 0.3), 0 4px 12px rgba(0, 0, 0, 0.2)'
+      : '0 4px 12px rgba(14, 165, 233, 0.15)',
     shadowSelected: isDark
-      ? '0 0 30px rgba(168, 85, 247, 0.6), 0 4px 20px rgba(0, 0, 0, 0.3)'
-      : '0 0 20px rgba(168, 85, 247, 0.4), 0 4px 16px rgba(0, 0, 0, 0.15)',
-    labelBg: isDark ? 'rgba(30, 27, 75, 0.95)' : 'rgba(255, 255, 255, 0.95)',
-    labelBorder: isDark ? 'rgba(168, 85, 247, 0.3)' : 'rgba(139, 92, 246, 0.3)',
-    labelText: isDark ? '#E9D5FF' : '#4C1D95',
-    labelIp: isDark ? '#A78BFA' : '#7C3AED',
+      ? '0 0 30px rgba(6, 182, 212, 0.5), 0 4px 20px rgba(0, 0, 0, 0.3)'
+      : '0 0 20px rgba(14, 165, 233, 0.35), 0 4px 16px rgba(0, 0, 0, 0.15)',
+    labelBg: isDark ? 'rgba(15, 23, 42, 0.95)' : 'rgba(255, 255, 255, 0.95)',
+    labelBorder: isDark ? 'rgba(14, 165, 233, 0.3)' : 'rgba(14, 165, 233, 0.28)',
+    labelText: isDark ? '#BAE6FD' : '#0C4A6E',
+    labelIp: isDark ? '#38BDF8' : '#0369A1',
   };
 
   // Get device icon

@@ -3,6 +3,9 @@ import { motion } from 'framer-motion';
 import { HostInfo } from '../../hooks/useScan';
 import { useTheme } from '../../hooks/useTheme';
 import clsx from 'clsx';
+import { useEffect, useState } from 'react';
+import type { DeviceRecord } from '../../lib/api/types';
+import { tauriClient } from '../../lib/api/tauri-client';
 
 interface DeviceDetailModalProps {
   device: HostInfo | null;
@@ -10,10 +13,37 @@ interface DeviceDetailModalProps {
 }
 
 export default function DeviceDetailModal({ device, onClose }: DeviceDetailModalProps) {
-  if (!device) return null;
-
   const { theme } = useTheme();
   const isDark = theme === 'dark';
+  const [persistedDevice, setPersistedDevice] = useState<DeviceRecord | null>(null);
+
+  useEffect(() => {
+    if (!device) {
+      setPersistedDevice(null);
+      return;
+    }
+
+    let mounted = true;
+
+    tauriClient
+      .getDeviceByMac(device.mac)
+      .then((result) => {
+        if (mounted) {
+          setPersistedDevice(result);
+        }
+      })
+      .catch(() => {
+        if (mounted) {
+          setPersistedDevice(null);
+        }
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, [device]);
+
+  if (!device) return null;
 
   const isOnline = device.response_time_ms !== null && device.response_time_ms !== undefined;
   
@@ -193,6 +223,9 @@ export default function DeviceDetailModal({ device, onClose }: DeviceDetailModal
             <div className="grid grid-cols-2 gap-2">
               <InfoCard label="IP Address" value={device.ip} mono />
               <InfoCard label="MAC Address" value={device.mac} mono />
+              {persistedDevice?.custom_name && (
+                <InfoCard label="Custom Name" value={persistedDevice.custom_name} />
+              )}
               <InfoCard label="Vendor" value={device.vendor || 'Unknown'} />
               <InfoCard label="Discovery" value={device.discovery_method} />
               {device.response_time_ms !== null && device.response_time_ms !== undefined && (
@@ -202,7 +235,7 @@ export default function DeviceDetailModal({ device, onClose }: DeviceDetailModal
                 <InfoCard label="TTL" value={device.ttl.toString()} />
               )}
               {device.os_guess && (
-                <InfoCard label="OS Detection" value={device.os_guess} span2 accent="#8B5CF6" />
+                <InfoCard label="OS Detection" value={device.os_guess} span2 accent="#0EA5E9" />
               )}
             </div>
           </div>
@@ -211,7 +244,7 @@ export default function DeviceDetailModal({ device, onClose }: DeviceDetailModal
           {device.open_ports && device.open_ports.length > 0 && (
             <div className="space-y-4">
               <div className="flex items-center gap-2">
-                <Shield className="w-3.5 h-3.5 text-purple-500" />
+                <Shield className="w-3.5 h-3.5 text-cyan-500" />
                 <h3 className={clsx(
                   "text-xs font-semibold uppercase tracking-wider",
                   isDark ? "text-white" : "text-slate-900"

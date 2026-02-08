@@ -41,7 +41,7 @@ export default function FAB({ actions = [] }: FABProps) {
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
               >
-                <span className="text-accent-purple group-hover:scale-110 transition-transform">
+                <span className="text-accent-blue group-hover:scale-110 transition-transform">
                   {action.icon}
                 </span>
                 <span className="text-sm font-medium text-text-primary">
@@ -55,7 +55,7 @@ export default function FAB({ actions = [] }: FABProps) {
 
       {/* Main FAB Button */}
       <motion.button
-        className="w-14 h-14 bg-gradient-to-br from-accent-purple to-accent-blue text-white rounded-full shadow-lg hover:shadow-xl flex items-center justify-center"
+        className="w-14 h-14 bg-gradient-to-br from-accent-blue to-accent-sapphire text-white rounded-full shadow-lg hover:shadow-xl flex items-center justify-center"
         whileHover={{ scale: 1.1 }}
         whileTap={{ scale: 0.9 }}
         onClick={() => setIsOpen(!isOpen)}

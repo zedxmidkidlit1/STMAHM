@@ -9,6 +9,9 @@ interface DeviceListProps {
   onDeviceClick?: (device: HostInfo) => void;
 }
 
+const CARD =
+  'rounded-2xl border border-slate-200/70 bg-white/85 backdrop-blur-sm shadow-sm dark:border-slate-800 dark:bg-slate-950/65';
+
 export default function DeviceList({ onDeviceClick }: DeviceListProps) {
   const [search, setSearch] = useState('');
   const [activeTab, setActiveTab] = useState('all');
@@ -71,23 +74,33 @@ export default function DeviceList({ onDeviceClick }: DeviceListProps) {
   // Empty state
   if (!scanResult && !isScanning) {
     return (
-      <div className="p-6 lg:p-8">
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold text-text-primary">Devices</h1>
-          <p className="text-text-muted mt-1">No scan data available</p>
+      <div className="relative flex-1 overflow-y-auto bg-bg-primary p-4 sm:p-6 lg:p-8">
+        <div className="pointer-events-none absolute inset-0 overflow-hidden">
+          <div className="absolute -top-16 -left-16 h-80 w-80 rounded-full bg-cyan-300/15 blur-3xl dark:bg-cyan-500/10" />
+          <div className="absolute top-20 right-0 h-96 w-96 rounded-full bg-slate-300/10 blur-3xl dark:bg-slate-500/10" />
         </div>
-        <motion.div 
-          className="flex flex-col items-center justify-center min-h-[400px] text-center"
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-        >
-          <WifiOff className="w-16 h-16 text-text-muted mb-4" />
-          <p className="text-text-muted">
-            {tauriAvailable 
-              ? 'Click "Start Scan" to discover devices'
-              : 'Run with `npm run tauri dev` to enable scanning'}
-          </p>
-        </motion.div>
+        <div className="relative z-10 space-y-6">
+          <div className={`${CARD} p-5 sm:p-6`}>
+            <p className="text-xs uppercase tracking-[0.22em] text-cyan-600 dark:text-cyan-300">
+              Asset Inventory
+            </p>
+            <h1 className="mt-2 text-2xl font-black text-text-primary sm:text-4xl">Devices</h1>
+            <p className="mt-2 text-sm text-text-secondary sm:text-base">No scan data available.</p>
+          </div>
+
+          <motion.div 
+            className={`${CARD} flex min-h-[400px] flex-col items-center justify-center text-center`}
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+          >
+            <WifiOff className="w-16 h-16 text-text-muted mb-4" />
+            <p className="text-text-muted">
+              {tauriAvailable 
+                ? 'Click "Start Scan" to discover devices'
+                : 'Run with `npm run tauri dev` to enable scanning'}
+            </p>
+          </motion.div>
+        </div>
       </div>
     );
   }
@@ -95,23 +108,47 @@ export default function DeviceList({ onDeviceClick }: DeviceListProps) {
   // Loading state
   if (isScanning && !scanResult) {
     return (
-      <div className="p-6 lg:p-8">
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold text-text-primary">Devices</h1>
-          <p className="text-text-muted mt-1">Scanning network...</p>
+      <div className="relative flex-1 overflow-y-auto bg-bg-primary p-4 sm:p-6 lg:p-8">
+        <div className="pointer-events-none absolute inset-0 overflow-hidden">
+          <div className="absolute -top-16 -left-16 h-80 w-80 rounded-full bg-cyan-300/15 blur-3xl dark:bg-cyan-500/10" />
+          <div className="absolute top-20 right-0 h-96 w-96 rounded-full bg-slate-300/10 blur-3xl dark:bg-slate-500/10" />
         </div>
-        <div className="flex flex-col items-center justify-center min-h-[400px]">
-          <Loader2 className="w-16 h-16 text-accent-blue animate-spin mb-4" />
-          <p className="text-text-muted">Discovering devices...</p>
+        <div className="relative z-10 space-y-6">
+          <div className={`${CARD} p-5 sm:p-6`}>
+            <p className="text-xs uppercase tracking-[0.22em] text-cyan-600 dark:text-cyan-300">
+              Asset Inventory
+            </p>
+            <h1 className="mt-2 text-2xl font-black text-text-primary sm:text-4xl">Devices</h1>
+            <p className="mt-2 text-sm text-text-secondary sm:text-base">Scanning network...</p>
+          </div>
+          <div className={`${CARD} flex min-h-[400px] flex-col items-center justify-center`}>
+            <Loader2 className="w-16 h-16 text-accent-blue animate-spin mb-4" />
+            <p className="text-text-muted">Discovering devices...</p>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="p-6 lg:p-8">
+    <div className="relative flex-1 overflow-y-auto bg-bg-primary p-4 sm:p-6 lg:p-8">
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div className="absolute -top-16 -left-16 h-80 w-80 rounded-full bg-cyan-300/15 blur-3xl dark:bg-cyan-500/10" />
+        <div className="absolute top-20 right-0 h-96 w-96 rounded-full bg-slate-300/10 blur-3xl dark:bg-slate-500/10" />
+      </div>
+      <div className="relative z-10 space-y-6">
+      <div className={`${CARD} p-5 sm:p-6`}>
+        <p className="text-xs uppercase tracking-[0.22em] text-cyan-600 dark:text-cyan-300">
+          Asset Inventory
+        </p>
+        <h1 className="mt-2 text-2xl font-black text-text-primary sm:text-4xl">Devices</h1>
+        <p className="mt-2 text-sm text-text-secondary sm:text-base">
+          Search, filter, and inspect discovered network assets by state and risk.
+        </p>
+      </div>
+
       {/* Search Bar */}
-      <div className="mb-6">
+      <div className={`${CARD} p-4`}>
         <div className="relative max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted" />
           <input
@@ -125,7 +162,7 @@ export default function DeviceList({ onDeviceClick }: DeviceListProps) {
       </div>
 
       {/* Tab Filters */}
-      <div className="flex items-center justify-between mb-6">
+      <div className={`${CARD} flex items-center justify-between p-4`}>
         <TabFilter
           tabs={tabs}
           activeTab={activeTab}
@@ -139,7 +176,7 @@ export default function DeviceList({ onDeviceClick }: DeviceListProps) {
       {/* Device Grid */}
       {filteredDevices.length === 0 ? (
         <motion.div 
-          className="flex flex-col items-center justify-center py-16 text-center"
+          className={`${CARD} flex flex-col items-center justify-center py-16 text-center`}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
         >
@@ -169,6 +206,7 @@ export default function DeviceList({ onDeviceClick }: DeviceListProps) {
           ))}
         </motion.div>
       )}
+      </div>
     </div>
   );
 }

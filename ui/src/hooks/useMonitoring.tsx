@@ -5,80 +5,32 @@
  */
 
 import { useState, useEffect, useCallback } from "react";
-import type { UnlistenFn } from "@tauri-apps/api/event";
+import { invoke } from "@tauri-apps/api/core";
+import { listen, type UnlistenFn } from "@tauri-apps/api/event";
+import { isTauri } from "../lib/runtime/is-tauri";
+import type { MonitoringStatus, NetworkEventType } from "../lib/api/types";
 
-// Check if running in Tauri environment (supports v1 and v2)
-const isTauriAvailable = () => {
-  if (typeof window === "undefined") return false;
-  // Tauri v2 uses __TAURI_INTERNALS__, v1 uses __TAURI__
-  return "__TAURI_INTERNALS__" in window || "__TAURI__" in window;
-};
+export type { MonitoringStatus, NetworkEventType };
 
-// Safe invoke that returns null if Tauri is not available
 async function safeInvoke<T>(
   command: string,
   args?: Record<string, unknown>,
 ): Promise<T | null> {
-  if (!isTauriAvailable()) {
-    console.warn(`Tauri not available, skipping invoke: ${command}`);
+  if (!isTauri()) {
     return null;
   }
-  const { invoke } = await import("@tauri-apps/api/core");
   return invoke<T>(command, args);
 }
 
-// Safe listen that returns noop if Tauri is not available
 async function safeListen<T>(
   event: string,
   handler: (event: { payload: T }) => void,
 ): Promise<UnlistenFn> {
-  if (!isTauriAvailable()) {
-    console.warn(`Tauri not available, skipping listen: ${event}`);
-    return () => {}; // Return noop unlisten function
+  if (!isTauri()) {
+    return () => {};
   }
-  const { listen } = await import("@tauri-apps/api/event");
   return listen<T>(event, handler);
 }
-
-// Event types matching Rust NetworkEvent
-export interface MonitoringStatus {
-  is_running: boolean;
-  interval_seconds: number;
-  scan_count: number;
-  last_scan_time?: string;
-  devices_online: number;
-  devices_total: number;
-}
-
-export type NetworkEventType =
-  | { type: "MonitoringStarted"; data: { interval_seconds: number } }
-  | { type: "MonitoringStopped" }
-  | { type: "ScanStarted"; data: { scan_number: number } }
-  | {
-      type: "ScanProgress";
-      data: { phase: string; percent: number; message: string };
-    }
-  | {
-      type: "ScanCompleted";
-      data: { scan_number: number; hosts_found: number; duration_ms: number };
-    }
-  | {
-      type: "NewDeviceDiscovered";
-      data: { ip: string; mac: string; hostname?: string; device_type: string };
-    }
-  | {
-      type: "DeviceWentOffline";
-      data: { mac: string; last_ip: string; hostname?: string };
-    }
-  | {
-      type: "DeviceCameOnline";
-      data: { mac: string; ip: string; hostname?: string };
-    }
-  | {
-      type: "DeviceIpChanged";
-      data: { mac: string; old_ip: string; new_ip: string };
-    }
-  | { type: "MonitoringError"; data: { message: string } };
 
 export interface MonitoringState {
   status: MonitoringStatus;
@@ -274,7 +226,7 @@ export function useMonitoring(options: UseMonitoringOptions = {}) {
         unlisten();
       }
     };
-  }, [fetchStatus, maxEvents]);
+  }, [fetchStatus, maxEvents, onNewDevice, onScanComplete]);
 
   return {
     ...state,
@@ -304,7 +256,7 @@ export function getEventStyle(eventType: string): {
     case "ScanCompleted":
       return { icon: "✅", color: "text-green-500" };
     case "NewDeviceDiscovered":
-      return { icon: "🆕", color: "text-purple-500" };
+      return { icon: "🆕", color: "text-cyan-500" };
     case "DeviceWentOffline":
       return { icon: "📴", color: "text-red-500" };
     case "DeviceCameOnline":

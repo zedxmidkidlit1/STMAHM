@@ -25,7 +25,7 @@ const deviceColors: Record<string, string> = {
   SERVER: '#F59E0B',
   PC: '#6B7280',
   LAPTOP: '#6B7280',
-  MOBILE: '#EC4899',
+  MOBILE: '#14B8A6',
   PRINTER: '#14B8A6',
   CAMERA: '#F97316',
   SWITCH: '#10B981',

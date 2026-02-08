@@ -1,8 +1,8 @@
 import { X, AlertTriangle, AlertCircle, CheckCircle, Bell } from 'lucide-react';
 import { useState, useEffect } from 'react';
-import { invoke } from '@tauri-apps/api/core';
 import clsx from 'clsx';
 import type { Alert } from './AlertBadge';
+import { tauriClient } from '../../lib/api/tauri-client';
 
 interface AlertPanelProps {
   isOpen: boolean;
@@ -16,7 +16,7 @@ export default function AlertPanel({ isOpen, onClose }: AlertPanelProps) {
   const loadAlerts = async () => {
     try {
       setIsLoading(true);
-      const data = await invoke<Alert[]>('get_unread_alerts');
+      const data = await tauriClient.getUnreadAlerts();
       setAlerts(data);
     } catch (error) {
       console.error('Failed to load alerts:', error);
@@ -33,7 +33,7 @@ export default function AlertPanel({ isOpen, onClose }: AlertPanelProps) {
 
   const markAsRead = async (alertId: number) => {
     try {
-      await invoke('mark_alert_read', { alertId });
+      await tauriClient.markAlertRead(alertId);
       setAlerts(prev => prev.filter(a => a.id !== alertId));
     } catch (error) {
       console.error('Failed to mark alert as read:', error);
@@ -42,7 +42,7 @@ export default function AlertPanel({ isOpen, onClose }: AlertPanelProps) {
 
   const markAllAsRead = async () => {
     try {
-      await invoke('mark_all_alerts_read');
+      await tauriClient.markAllAlertsRead();
       setAlerts([]);
     } catch (error) {
       console.error('Failed to mark all alerts as read:', error);

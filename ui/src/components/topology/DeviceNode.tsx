@@ -42,19 +42,19 @@ const deviceIcons: Record<string, React.ElementType> = {
 const deviceColors: Record<string, string> = {
   ROUTER: '#3B82F6',
   SWITCH: '#10B981',
-  ACCESS_POINT: '#8B5CF6',
+  ACCESS_POINT: '#0EA5E9',
   FIREWALL: '#EF4444',
   SERVER: '#F59E0B',
   NAS: '#F59E0B',
   PC: '#6B7280',
   LAPTOP: '#6B7280',
-  MOBILE: '#EC4899',
-  TABLET: '#EC4899',
+  MOBILE: '#14B8A6',
+  TABLET: '#14B8A6',
   SMART_TV: '#14B8A6',
   IOT_DEVICE: '#EF4444',
   PRINTER: '#14B8A6',
   CAMERA: '#F97316',
-  GAME_CONSOLE: '#8B5CF6',
+  GAME_CONSOLE: '#06B6D4',
   UNKNOWN: '#9CA3AF',
 };
 

@@ -119,9 +119,9 @@ export default function EmptyDashboard({ onScan, isScanning = false }: EmptyDash
           <div className="text-center max-w-xl">
             {/* Icon */}
             <motion.div
-              className="w-20 h-20 mx-auto mb-6 rounded-2xl bg-gradient-to-br from-accent-purple to-accent-blue flex items-center justify-center shadow-2xl"
+              className="w-20 h-20 mx-auto mb-6 rounded-2xl bg-gradient-to-br from-accent-blue to-accent-sapphire flex items-center justify-center shadow-2xl"
               style={{
-                boxShadow: '0 20px 60px rgba(139, 92, 246, 0.4), 0 0 40px rgba(59, 130, 246, 0.3)',
+                boxShadow: '0 20px 60px rgba(14, 165, 233, 0.35), 0 0 40px rgba(37, 99, 235, 0.25)',
               }}
               animate={{
                 y: [0, -10, 0],
@@ -136,7 +136,7 @@ export default function EmptyDashboard({ onScan, isScanning = false }: EmptyDash
             </motion.div>
 
             {/* Title */}
-            <h2 className="text-3xl font-bold text-white mb-3">
+            <h2 className="text-3xl font-bold text-text-primary mb-3">
               Discover Your Network
             </h2>
             <p className="text-lg text-text-secondary mb-8 max-w-md mx-auto">
@@ -149,11 +149,11 @@ export default function EmptyDashboard({ onScan, isScanning = false }: EmptyDash
               disabled={isScanning}
               whileHover={{ scale: 1.05, y: -3 }}
               whileTap={{ scale: 0.95 }}
-              className="relative px-12 py-5 rounded-2xl bg-gradient-to-br from-accent-purple via-accent-blue to-accent-purple text-white font-bold text-lg transition-all duration-300 overflow-hidden group shadow-2xl disabled:opacity-50 disabled:cursor-not-allowed"
+              className="relative px-12 py-5 rounded-2xl bg-gradient-to-br from-accent-blue via-accent-sapphire to-accent-teal text-white font-bold text-lg transition-all duration-300 overflow-hidden group shadow-2xl disabled:opacity-50 disabled:cursor-not-allowed"
               style={{
                 boxShadow: isScanning 
-                  ? '0 10px 40px rgba(139, 92, 246, 0.4)' 
-                  : '0 10px 40px rgba(139, 92, 246, 0.5), 0 0 60px rgba(59, 130, 246, 0.3)',
+                  ? '0 10px 40px rgba(14, 165, 233, 0.35)' 
+                  : '0 10px 40px rgba(14, 165, 233, 0.45), 0 0 60px rgba(37, 99, 235, 0.25)',
               }}
             >
               {/* Animated gradient overlay */}

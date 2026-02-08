@@ -53,8 +53,8 @@
   --color-accent-green: #10b981;
   --color-accent-red: #ef4444;
   --color-accent-amber: #f59e0b;
-  --color-accent-purple: #8b5cf6;
-  --color-accent-pink: #ec4899;
+  --color-accent-purple: #0ea5e9;
+  --color-accent-pink: #22c55e;
   --color-accent-teal: #14b8a6;
   --color-accent-orange: #f97316;
   --color-accent-gold: #fbbf24;
@@ -70,10 +70,10 @@
   /* Device type colors */
   --color-device-router: #3b82f6;
   --color-device-switch: #10b981;
-  --color-device-ap: #8b5cf6;
+  --color-device-ap: #0ea5e9;
   --color-device-server: #f59e0b;
   --color-device-pc: #6b7280;
-  --color-device-mobile: #ec4899;
+  --color-device-mobile: #14b8a6;
   --color-device-iot: #ef4444;
   --color-device-printer: #14b8a6;
   --color-device-camera: #f97316;
@@ -87,7 +87,7 @@
     0 8px 32px rgba(0, 0, 0, 0.4), 0 2px 8px rgba(0, 0, 0, 0.3),
     inset 0 1px 0 rgba(255, 255, 255, 0.05);
   --shadow-glow-blue: 0 0 40px rgba(59, 130, 246, 0.3);
-  --shadow-glow-purple: 0 0 40px rgba(139, 92, 246, 0.3);
+  --shadow-glow-purple: 0 0 40px rgba(14, 165, 233, 0.3);
 
   /* Fonts */
   --font-sans:
@@ -102,16 +102,16 @@
   
   /* Professional Gradients - Muted & Sophisticated */
   --gradient-slate: linear-gradient(135deg, #475569 0%, #334155 100%);
-  --gradient-indigo: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
+  --gradient-indigo: linear-gradient(135deg, #0284c7 0%, #2563eb 100%);
   --gradient-teal: linear-gradient(135deg, #0d9488 0%, #14b8a6 100%);
-  --gradient-violet: linear-gradient(135deg, #7c3aed 0%, #8b5cf6 100%);
-  --gradient-mesh: radial-gradient(ellipse at top, rgba(79, 70, 229, 0.08), transparent 50%);
+  --gradient-violet: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+  --gradient-mesh: radial-gradient(ellipse at top, rgba(14, 165, 233, 0.08), transparent 50%);
   
   /* Enterprise Accent Colors */
   --color-accent-navy: #1e40af;
-  --color-accent-indigo: #4f46e5;
+  --color-accent-indigo: #0284c7;
   --color-accent-teal: #0d9488;
-  --color-accent-violet: #7c3aed;
+  --color-accent-violet: #0ea5e9;
   --color-accent-amber: #d97706;
   --color-accent-rose: #e11d48;
   
@@ -123,7 +123,7 @@
   
   /* Enhanced Glow Shadows - Subtle */
   --shadow-glow-green: 0 0 24px rgba(5, 150, 105, 0.25);
-  --shadow-glow-indigo: 0 0 24px rgba(79, 70, 229, 0.25);
+  --shadow-glow-indigo: 0 0 24px rgba(14, 165, 233, 0.25);
   --shadow-glow-teal: 0 0 24px rgba(13, 148, 136, 0.25);
   
   /* Backdrop Blur */
@@ -140,16 +140,16 @@
   
   /* Light Mode Gradients */
   --gradient-slate: linear-gradient(135deg, #cbd5e1 0%, #94a3b8 100%);
-  --gradient-indigo: linear-gradient(135deg, #818cf8 0%, #a5b4fc 100%);
+  --gradient-indigo: linear-gradient(135deg, #7dd3fc 0%, #bfdbfe 100%);
   --gradient-teal: linear-gradient(135deg, #5eead4 0%, #99f6e4 100%);
-  --gradient-violet: linear-gradient(135deg, #c4b5fd 0%, #ddd6fe 100%);
-  --gradient-mesh: radial-gradient(ellipse at top, rgba(99, 102, 241, 0.05), transparent 50%);
+  --gradient-violet: linear-gradient(135deg, #bae6fd 0%, #ccfbf1 100%);
+  --gradient-mesh: radial-gradient(ellipse at top, rgba(14, 165, 233, 0.05), transparent 50%);
   
   /* Light Mode Accent Colors */
   --color-accent-navy: #1e40af;
-  --color-accent-indigo: #4338ca;
+  --color-accent-indigo: #0369a1;
   --color-accent-teal: #0f766e;
-  --color-accent-violet: #6d28d9;
+  --color-accent-violet: #0284c7;
   --color-accent-amber: #b45309;
   --color-accent-rose: #be123c;
   
@@ -161,7 +161,7 @@
   
   /* Light Mode Glow Shadows - Very Subtle */
   --shadow-glow-green: 0 0 16px rgba(15, 118, 110, 0.15);
-  --shadow-glow-indigo: 0 0 16px rgba(67, 56, 202, 0.15);
+  --shadow-glow-indigo: 0 0 16px rgba(2, 132, 199, 0.15);
   --shadow-glow-teal: 0 0 16px rgba(15, 118, 110, 0.15);
 }
 
@@ -239,17 +239,17 @@
     ),
     radial-gradient(
       ellipse 60% 40% at 80% 20%,
-      rgba(139, 92, 246, 0.12) 0%,
+      rgba(14, 165, 233, 0.12) 0%,
       transparent 45%
     ),
     radial-gradient(
       ellipse 50% 30% at 10% 80%,
-      rgba(34, 211, 238, 0.08) 0%,
+      rgba(20, 184, 166, 0.08) 0%,
       transparent 40%
     ),
     radial-gradient(
       ellipse 40% 40% at 90% 70%,
-      rgba(236, 72, 153, 0.06) 0%,
+      rgba(245, 158, 11, 0.06) 0%,
       transparent 40%
     );
   pointer-events: none;
@@ -265,12 +265,12 @@
     ),
     radial-gradient(
       ellipse 60% 40% at 80% 20%,
-      rgba(139, 92, 246, 0.06) 0%,
+      rgba(14, 165, 233, 0.06) 0%,
       transparent 45%
     ),
     radial-gradient(
       ellipse 50% 30% at 10% 80%,
-      rgba(34, 211, 238, 0.05) 0%,
+      rgba(20, 184, 166, 0.05) 0%,
       transparent 40%
     );
 }
@@ -332,8 +332,8 @@ body {
   background: linear-gradient(
     135deg,
     rgba(59, 130, 246, 0.3) 0%,
-    rgba(139, 92, 246, 0.3) 50%,
-    rgba(236, 72, 153, 0.3) 100%
+    rgba(14, 165, 233, 0.3) 50%,
+    rgba(20, 184, 166, 0.3) 100%
   );
   -webkit-mask:
     linear-gradient(#fff 0 0) content-box,
@@ -387,8 +387,8 @@ body {
 
 @utility glow-purple {
   box-shadow:
-    0 0 30px rgba(139, 92, 246, 0.4),
-    0 0 60px rgba(139, 92, 246, 0.2);
+    0 0 30px rgba(14, 165, 233, 0.4),
+    0 0 60px rgba(14, 165, 233, 0.2);
 }
 
 @utility glow-green {
@@ -399,7 +399,7 @@ body {
 
 /* Gradient text */
 @utility gradient-text {
-  background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 50%, #ec4899 100%);
+  background: linear-gradient(135deg, #3b82f6 0%, #0ea5e9 50%, #14b8a6 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -407,7 +407,7 @@ body {
 
 /* Premium button gradient */
 @utility btn-premium {
-  background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+  background: linear-gradient(135deg, #3b82f6 0%, #0ea5e9 100%);
   color: white;
   font-weight: 600;
   border-radius: var(--radius-lg);
@@ -632,24 +632,6 @@ body {
 }
 
 /* ================= CUSTOM ANIMATIONS ================= */
-@keyframes float {
-  0%, 100% {
-    transform: translateY(0px);
-  }
-  50% {
-    transform: translateY(-10px);
-  }
-}
-
-@keyframes shimmer {
-  0% {
-    transform: translateX(-100%);
-  }
-  100% {
-    transform: translateX(100%);
-  }
-}
-
 @keyframes pulse-slow {
   0%, 100% {
     opacity: 1;

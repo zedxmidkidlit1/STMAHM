@@ -1,6 +1,5 @@
 import { Bell, Sun, Moon, Play, CircleStop, Loader2, Circle, CheckCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { useEffect } from 'react';
 import { ScanStatus } from '../../hooks/useScan';
 import { useTheme } from '../../hooks/useTheme';
 
@@ -27,11 +26,6 @@ const pageInfo: Record<string, { title: string; subtitle: string }> = {
 
 // Status Pill Component
 function StatusPill({ scanStatus }: { scanStatus: ScanStatus }) {
-  // Debug log
-  useEffect(() => {
-    console.log('[StatusPill] Rendering with scanStatus:', scanStatus);
-  }, [scanStatus]);
-
   const getStatusConfig = () => {
     switch (scanStatus) {
       case 'scanning':
@@ -86,13 +80,7 @@ export default function TopHeader({
 }: TopHeaderProps) {
   const { theme, toggleTheme } = useTheme();
 
-  // Debug: Log isScanning prop changes
-  useEffect(() => {
-    console.log('[TopHeader] scanStatus prop received:', scanStatus);
-  }, [scanStatus]);
-
   const handleScanToggle = () => {
-    console.log('[TopHeader] handleScanToggle called, current scanStatus:', scanStatus);
     if (isScanning) {
       onStopScan?.();
     } else {
@@ -122,7 +110,7 @@ export default function TopHeader({
       case 'ready':
       default:
         return {
-          bgColor: 'bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 shadow-lg shadow-indigo-500/30',
+          bgColor: 'bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 shadow-lg shadow-cyan-500/30',
           icon: <Play className="w-4 h-4 fill-current" />,
           text: 'Start Scan',
           disabled: false,

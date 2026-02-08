@@ -33,6 +33,9 @@ interface DeviceWithVulns {
   security_grade?: string;
 }
 
+const CARD =
+  'rounded-2xl border border-slate-200/70 bg-white/85 backdrop-blur-sm shadow-sm dark:border-slate-800 dark:bg-slate-950/65';
+
 export default function Vulnerabilities() {
   const { scanResult } = useScanContext();
   const [devices, setDevices] = useState<DeviceWithVulns[]>([]);
@@ -79,9 +82,31 @@ export default function Vulnerabilities() {
   });
 
   return (
-    <div className="p-6 lg:p-8">
+    <div className="relative flex-1 overflow-y-auto bg-bg-primary p-4 sm:p-6 lg:p-8">
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div className="absolute -top-16 -left-16 h-80 w-80 rounded-full bg-cyan-300/15 blur-3xl dark:bg-cyan-500/10" />
+        <div className="absolute top-20 right-0 h-96 w-96 rounded-full bg-rose-300/10 blur-3xl dark:bg-rose-500/10" />
+      </div>
+
+      <div className="relative z-10 space-y-6">
+      <motion.section
+        initial={{ opacity: 0, y: -12 }}
+        animate={{ opacity: 1, y: 0 }}
+        className={`${CARD} p-5 sm:p-6`}
+      >
+        <div className="space-y-2">
+          <p className="text-xs uppercase tracking-[0.22em] text-cyan-600 dark:text-cyan-300">
+            Security Intelligence
+          </p>
+          <h1 className="text-2xl font-black text-text-primary sm:text-4xl">Vulnerability Center</h1>
+          <p className="max-w-2xl text-sm text-text-secondary sm:text-base">
+            Inspect vulnerability signals and port-level warnings across discovered assets.
+          </p>
+        </div>
+      </motion.section>
+
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <SummaryCard
           title="Critical"
           count={stats.critical}
@@ -118,7 +143,7 @@ export default function Vulnerabilities() {
 
       {/* Device Security Cards */}
       {filteredDevices.length === 0 ? (
-        <div className="text-center py-16">
+        <div className={`${CARD} text-center py-16`}>
           <Shield className="w-16 h-16 mx-auto mb-4 text-text-muted opacity-50" />
           <p className="text-text-muted">
             {scanResult ? `No devices found${filter !== 'all' ? ' for this filter' : ''}` : 'Run a scan to see device vulnerabilities'}
@@ -138,6 +163,7 @@ export default function Vulnerabilities() {
           ))}
         </div>
       )}
+      </div>
     </div>
   );
 }
@@ -163,17 +189,17 @@ function SummaryCard({ title, count, icon, color, onClick, active }: SummaryCard
   return (
     <motion.button
       onClick={onClick}
-      className={`p-6 rounded-xl border-2 transition-all bg-bg-secondary ${
+      className={`p-6 rounded-2xl border transition-all bg-white/85 backdrop-blur-sm shadow-sm dark:bg-slate-950/65 dark:border-slate-800 ${
         active ? 'ring-2 ring-accent-blue' : ''
       } ${colorClasses[color]}`}
       whileHover={{ scale: 1.02, y: -2 }}
       whileTap={{ scale: 0.98 }}
     >
       <div className="flex items-center justify-between mb-2">
-        <span className="text-sm font-semibold opacity-80">{title}</span>
+        <span className="text-xs font-semibold uppercase tracking-wider opacity-80">{title}</span>
         {icon}
       </div>
-      <div className="text-3xl font-bold">{count}</div>
+      <div className="text-4xl font-black">{count}</div>
     </motion.button>
   );
 }
@@ -200,11 +226,11 @@ function SecurityCard({ device }: SecurityCardProps) {
   const isSecure = !hasVulns && !hasWarnings;
 
   return (
-    <div className="bg-bg-secondary border border-theme rounded-2xl p-6 hover:border-accent-blue/30 transition-all">
+    <div className="rounded-2xl border border-slate-200/70 bg-white/85 p-6 shadow-sm backdrop-blur-sm transition-all hover:border-accent-blue/30 dark:border-slate-800 dark:bg-slate-950/65">
       {/* Device Header */}
       <div className="flex items-start justify-between mb-6">  
         <div className="flex-1 min-w-0">
-          <h3 className="text-2xl font-bold text-text-primary mb-1">
+          <h3 className="text-xl font-bold text-text-primary mb-1">
             {device.last_ip}
           </h3>
           <p className="text-text-muted text-sm">

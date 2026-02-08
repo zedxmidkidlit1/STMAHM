@@ -63,7 +63,7 @@ export default function BentoCard({
 
   const variantStyles = {
     default: 'bg-[var(--color-card-bg)] hover:bg-[var(--color-bg-hover)]/50',
-    gradient: 'bg-gradient-to-br from-accent-blue/20 to-accent-purple/20 hover:from-accent-blue/30 hover:to-accent-purple/30',
+    gradient: 'bg-gradient-to-br from-accent-blue/20 to-accent-teal/20 hover:from-accent-blue/30 hover:to-accent-teal/30',
     glass: 'glass',
   };
 

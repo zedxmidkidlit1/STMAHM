@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { motion } from 'framer-motion';
 import { FileDown, FileText, FileSpreadsheet, Shield, Network, BarChart3, Database } from 'lucide-react';
 import { useScanContext } from '../hooks/useScan';
 import { useExport } from '../hooks/useExport';
@@ -15,6 +16,9 @@ interface ExportCardProps {
   disabled?: boolean;
 }
 
+const CARD =
+  'rounded-2xl border border-slate-200/70 bg-white/85 backdrop-blur-sm shadow-sm dark:border-slate-800 dark:bg-slate-950/65';
+
 function ExportCard({ title, description, icon, format, formatColor, bgColor, onExport, isLoading, disabled }: ExportCardProps) {
   const [loading, setLoading] = useState(false);
 
@@ -28,7 +32,11 @@ function ExportCard({ title, description, icon, format, formatColor, bgColor, on
   };
 
   return (
-    <div className={`${bgColor} border border-theme rounded-xl p-6 transition-all ${disabled ? 'opacity-50 cursor-not-allowed' : 'hover:scale-[1.02]'}`}>
+    <div
+      className={`${CARD} ${bgColor} p-6 transition-all ${
+        disabled ? 'cursor-not-allowed opacity-50' : 'hover:scale-[1.02]'
+      }`}
+    >
       <div className="flex items-start justify-between mb-4">
         <div className="p-3 bg-white/80 dark:bg-slate-800/80 rounded-xl">
           {icon}
@@ -47,7 +55,7 @@ function ExportCard({ title, description, icon, format, formatColor, bgColor, on
         className={`w-full flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-bold text-sm shadow-lg transition-all ${
           disabled 
             ? 'bg-gray-400 cursor-not-allowed' 
-            : 'bg-gradient-to-r from-accent-purple to-indigo-600 hover:from-accent-purple/90 hover:to-indigo-600/90 text-white shadow-accent-purple/30'
+            : 'bg-gradient-to-r from-accent-blue to-accent-sapphire hover:brightness-110 text-white shadow-accent-blue/30'
         }`}
       >
         {loading || isLoading ? (
@@ -82,17 +90,39 @@ export default function Reports() {
   const hasData = scanResult && scanResult.active_hosts && scanResult.active_hosts.length > 0;
 
   return (
-    <div className="p-4">
+    <div className="relative flex-1 overflow-y-auto bg-bg-primary p-4 sm:p-6 lg:p-8">
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div className="absolute -top-16 -left-16 h-80 w-80 rounded-full bg-cyan-300/15 blur-3xl dark:bg-cyan-500/10" />
+        <div className="absolute top-20 right-0 h-96 w-96 rounded-full bg-emerald-300/10 blur-3xl dark:bg-emerald-500/10" />
+      </div>
+
+      <div className="relative z-10 space-y-6">
+      <motion.section
+        initial={{ opacity: 0, y: -12 }}
+        animate={{ opacity: 1, y: 0 }}
+        className={`${CARD} p-5 sm:p-6`}
+      >
+        <div className="space-y-2">
+          <p className="text-xs uppercase tracking-[0.22em] text-cyan-600 dark:text-cyan-300">
+            Export Hub
+          </p>
+          <h1 className="text-2xl font-black text-text-primary sm:text-4xl">Reports & Artifacts</h1>
+          <p className="max-w-2xl text-sm text-text-secondary sm:text-base">
+            Generate production-grade reports and structured exports for audits, handoffs, and automation.
+          </p>
+        </div>
+      </motion.section>
+
       {/* Error Alert */}
       {error && (
-        <div className="bg-accent-red/10 border border-accent-red/30 rounded-lg p-3 mb-4">
+        <div className={`${CARD} border-accent-red/30 bg-accent-red/10 p-3`}>
           <p className="text-accent-red text-sm">❌ Error: {error}</p>
         </div>
       )}
 
       {/* No Data Warning */}
       {!hasData && (
-        <div className="bg-accent-amber/10 border border-accent-amber/30 rounded-lg p-3 mb-4">
+        <div className={`${CARD} border-accent-amber/30 bg-accent-amber/10 p-3`}>
           <p className="text-accent-amber text-sm">⚠️ No scan data available. Run a network scan first.</p>
         </div>
       )}
@@ -196,6 +226,7 @@ export default function Reports() {
           isLoading={exportingType === 'scan-json'}
           disabled={!hasData}
         />
+      </div>
       </div>
     </div>
   );

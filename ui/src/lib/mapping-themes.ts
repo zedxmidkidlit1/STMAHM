@@ -51,7 +51,7 @@ export function getMappingTheme(design: MappingDesign, isDark: boolean): Mapping
       backgroundGradient: isDark 
         ? 'linear-gradient(135deg, #0A0E27 0%, #1a1f3a 50%, #0A0E27 100%)'
         : 'linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 50%, #EFF6FF 100%)',
-      patternColor: isDark ? '#1E1B4B' : 'rgba(59, 130, 246, 0.1)',
+      patternColor: isDark ? '#0E3A5A' : 'rgba(59, 130, 246, 0.1)',
       edgeStyle: 'straight',
       edgeWidth: 2.5,
       edgeOpacity: isDark ? 0.85 : 0.7,
@@ -64,21 +64,21 @@ export function getMappingTheme(design: MappingDesign, isDark: boolean): Mapping
       showTrafficMonitor: true,
     },
     mesh: {
-      // Grid/mesh network style with minimal nodes
+      // Grid/mesh network style with mission-control tones
       nodeComponent: 'mesh',
-      backgroundColor: isDark ? '#1a0033' : '#FAF5FF', // Dark purple vs light purple
+      backgroundColor: isDark ? '#061a2b' : '#F0F9FF',
       backgroundGradient: isDark
-        ? 'linear-gradient(135deg, #1a0033 0%, #2d1b4e 50%, #1a0033 100%)'
-        : 'linear-gradient(135deg, #FAF5FF 0%, #F3E8FF 50%, #FAF5FF 100%)',
-      patternColor: isDark ? '#3B1E5F' : 'rgba(168, 85, 247, 0.1)',
+        ? 'linear-gradient(135deg, #061a2b 0%, #0b2b45 50%, #061a2b 100%)'
+        : 'linear-gradient(135deg, #F0F9FF 0%, #E0F2FE 50%, #F0F9FF 100%)',
+      patternColor: isDark ? '#0E3A5A' : 'rgba(14, 165, 233, 0.1)',
       edgeStyle: 'smoothstep',
       edgeWidth: 1.5,
       edgeOpacity: isDark ? 0.5 : 0.4,
-      edgeColor: isDark ? '#A855F7' : '#7C3AED',
+      edgeColor: isDark ? '#22D3EE' : '#0284C7',
       edgeGlow: false,
       nodeBoxShadow: isDark
         ? '0 4px 12px rgba(0, 0, 0, 0.4)'
-        : '0 4px 12px rgba(139, 92, 246, 0.15)',
+        : '0 4px 12px rgba(14, 165, 233, 0.15)',
       showMetrics: false,
       showTrafficMonitor: true,
     },

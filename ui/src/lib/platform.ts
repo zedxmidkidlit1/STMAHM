@@ -1,3 +1,5 @@
+import { isTauri as isTauriRuntime } from "./runtime/is-tauri";
+
 /**
  * Platform Detection Utilities
  * Detects OS platform for platform-specific styling and behaviors
@@ -10,7 +12,7 @@ export type Platform = "windows" | "macos" | "linux" | "unknown";
  */
 export async function getPlatform(): Promise<Platform> {
   // In Tauri, we can use the API to detect platform
-  if (typeof window !== "undefined" && "__TAURI_INTERNALS__" in window) {
+  if (isTauriRuntime()) {
     try {
       const { platform } = await import("@tauri-apps/plugin-os");
       const platformType = await platform();
@@ -37,7 +39,7 @@ export async function getPlatform(): Promise<Platform> {
  * Check if running in Tauri environment
  */
 export function isTauri(): boolean {
-  return typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
+  return isTauriRuntime();
 }
 
 /**

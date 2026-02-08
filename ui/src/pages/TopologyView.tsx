@@ -28,14 +28,14 @@ import { useTheme } from '../hooks/useTheme';
 const DEVICE_TYPE_COLORS: Record<string, string> = {
   ROUTER: '#3B82F6',
   SWITCH: '#10B981',
-  ACCESS_POINT: '#8B5CF6',
+  ACCESS_POINT: '#0EA5E9',
   FIREWALL: '#EF4444',
   SERVER: '#F59E0B',
   NAS: '#F59E0B',
   LAPTOP: '#06B6D4',
   PC: '#06B6D4',
-  MOBILE: '#EC4899',
-  PRINTER: '#6366F1',
+  MOBILE: '#14B8A6',
+  PRINTER: '#22D3EE',
 };
 
 

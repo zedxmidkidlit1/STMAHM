@@ -1,5 +1,4 @@
 import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { invoke } from "@tauri-apps/api/core";
 import { motion } from "framer-motion";
 import {
   Activity,
@@ -20,6 +19,7 @@ import {
 } from "lucide-react";
 import { useMonitoring, type NetworkEventType } from "../hooks/useMonitoring";
 import { useScanContext } from "../hooks/useScan";
+import { tauriClient } from "../lib/api/tauri-client";
 
 interface DeviceRecord {
   mac: string;
@@ -70,6 +70,7 @@ interface DashboardPayload {
   health: NetworkHealth | null;
   scans: ScanRecord[];
   alerts: AlertRecord[];
+  distribution: Record<string, number> | null;
   fetchedAt: Date;
 }
 
@@ -201,6 +202,7 @@ export default function Dashboard() {
     health: null,
     scans: [],
     alerts: [],
+    distribution: null,
     fetchedAt: new Date(),
   });
   const [isLoading, setIsLoading] = useState(true);
@@ -217,13 +219,23 @@ export default function Dashboard() {
 
       try {
         setError(null);
-        const [devices, stats, health, scans, alerts] = await Promise.all([
-          invoke<DeviceRecord[]>("get_all_devices").catch(() => []),
-          invoke<NetworkStats>("get_network_stats").catch(() => null),
-          invoke<NetworkHealth>("get_network_health").catch(() => null),
-          invoke<ScanRecord[]>("get_scan_history", { limit: 14 }).catch(() => []),
-          invoke<AlertRecord[]>("get_unread_alerts").catch(() => []),
+        const [devices, stats, health, scans, alerts, distributionPayload] =
+          await Promise.all([
+          tauriClient.getAllDevices().catch(() => []),
+          tauriClient.getNetworkStats().catch(() => null),
+          tauriClient.getNetworkHealth().catch(() => null),
+          tauriClient.getScanHistory(14).catch(() => []),
+          tauriClient.getUnreadAlerts().catch(() => []),
+          tauriClient.getDeviceDistribution().catch(() => null),
         ]);
+
+        const distribution =
+          distributionPayload &&
+          typeof distributionPayload === "object" &&
+          distributionPayload.by_type &&
+          typeof distributionPayload.by_type === "object"
+            ? (distributionPayload.by_type as Record<string, number>)
+            : null;
 
         setPayload({
           devices,
@@ -231,6 +243,7 @@ export default function Dashboard() {
           health,
           scans,
           alerts,
+          distribution,
           fetchedAt: new Date(),
         });
       } catch (err) {
@@ -333,6 +346,13 @@ export default function Dashboard() {
   );
 
   const deviceTypeData = useMemo(() => {
+    if (payload.distribution) {
+      return Object.entries(payload.distribution)
+        .map(([type, count]) => ({ type, count }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 6);
+    }
+
     const counts = new Map<string, number>();
     for (const d of payload.devices) {
       const key = d.device_type || "UNKNOWN";

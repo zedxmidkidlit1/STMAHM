@@ -3,58 +3,15 @@
  */
 
 import { useState, useCallback, useEffect } from "react";
-import { invoke } from "@tauri-apps/api/core";
+import { tauriClient } from "../lib/api/tauri-client";
+import type {
+  AlertRecord,
+  DeviceRecord,
+  NetworkStats,
+  ScanRecord,
+} from "../lib/api/types";
 
-// Types matching Rust database models
-export interface ScanRecord {
-  id: number;
-  scan_time: string;
-  interface_name: string;
-  local_ip: string;
-  local_mac: string;
-  subnet: string;
-  scan_method: string;
-  arp_discovered: number;
-  icmp_discovered: number;
-  total_hosts: number;
-  duration_ms: number;
-}
-
-export interface DeviceRecord {
-  id: number;
-  mac: string;
-  first_seen: string;
-  last_seen: string;
-  last_ip?: string;
-  vendor?: string;
-  device_type?: string;
-  hostname?: string;
-  os_guess?: string;
-  custom_name?: string;
-  notes?: string;
-}
-
-export interface AlertRecord {
-  id: number;
-  created_at: string;
-  alert_type: string;
-  device_id?: number;
-  device_mac?: string;
-  device_ip?: string;
-  message: string;
-  severity: string;
-  is_read: boolean;
-}
-
-export interface NetworkStats {
-  total_devices: number;
-  online_devices: number;
-  offline_devices: number;
-  new_devices_24h: number;
-  high_risk_devices: number;
-  total_scans: number;
-  last_scan_time?: string;
-}
+export type { AlertRecord, DeviceRecord, NetworkStats, ScanRecord };
 
 /**
  * Hook for fetching network statistics
@@ -68,7 +25,7 @@ export function useNetworkStats() {
     setLoading(true);
     setError(null);
     try {
-      const result = await invoke<NetworkStats>("get_network_stats");
+      const result = await tauriClient.getNetworkStats();
       setStats(result);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -96,7 +53,7 @@ export function useScanHistory(limit: number = 20) {
     setLoading(true);
     setError(null);
     try {
-      const result = await invoke<ScanRecord[]>("get_scan_history", { limit });
+      const result = await tauriClient.getScanHistory(limit);
       setHistory(result);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -124,7 +81,7 @@ export function useDevices() {
     setLoading(true);
     setError(null);
     try {
-      const result = await invoke<DeviceRecord[]>("get_all_devices");
+      const result = await tauriClient.getAllDevices();
       setDevices(result);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -136,7 +93,7 @@ export function useDevices() {
   const updateDeviceName = useCallback(
     async (mac: string, name: string) => {
       try {
-        await invoke("update_device_name", { mac, name });
+        await tauriClient.updateDeviceName(mac, name);
         await fetchDevices(); // Refresh list
       } catch (err) {
         throw new Error(err instanceof Error ? err.message : String(err));
@@ -164,7 +121,7 @@ export function useAlerts() {
     setLoading(true);
     setError(null);
     try {
-      const result = await invoke<AlertRecord[]>("get_unread_alerts");
+      const result = await tauriClient.getUnreadAlerts();
       setAlerts(result);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -176,7 +133,7 @@ export function useAlerts() {
   const markAsRead = useCallback(
     async (alertId: number) => {
       try {
-        await invoke("mark_alert_read", { alertId });
+        await tauriClient.markAlertRead(alertId);
         await fetchAlerts();
       } catch (err) {
         throw new Error(err instanceof Error ? err.message : String(err));
@@ -187,7 +144,7 @@ export function useAlerts() {
 
   const markAllAsRead = useCallback(async () => {
     try {
-      await invoke("mark_all_alerts_read");
+      await tauriClient.markAllAlertsRead();
       await fetchAlerts();
     } catch (err) {
       throw new Error(err instanceof Error ? err.message : String(err));
@@ -215,7 +172,8 @@ export function useDatabasePath() {
   const [path, setPath] = useState<string | null>(null);
 
   useEffect(() => {
-    invoke<string>("get_database_path")
+    tauriClient
+      .getDatabasePath()
       .then(setPath)
       .catch(() => setPath(null));
   }, []);
