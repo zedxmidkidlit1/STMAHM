@@ -240,7 +240,9 @@ pub fn active_arp_scan(
     }
 
     // Wait for receiver to finish
-    let _ = receiver_handle.join();
+    if receiver_handle.join().is_err() {
+        return Err(anyhow!("ARP receiver thread panicked"));
+    }
 
     let map = discovered
         .lock()

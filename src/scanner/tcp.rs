@@ -16,6 +16,13 @@ macro_rules! log_stderr {
     };
 }
 
+/// Logs a warning to stderr
+macro_rules! log_warn {
+    ($($arg:tt)*) => {
+        eprintln!("[WARN] {}", format!($($arg)*));
+    };
+}
+
 /// Probes a single host for open ports
 async fn probe_host_ports(ip: Ipv4Addr) -> Vec<u16> {
     let mut open_ports = Vec::new();
@@ -54,7 +61,13 @@ pub async fn tcp_probe_scan(
         let port_results = Arc::clone(&port_results);
 
         let handle = tokio::spawn(async move {
-            let _permit = semaphore.acquire().await.expect("Semaphore closed");
+            let _permit = match semaphore.acquire().await {
+                Ok(permit) => permit,
+                Err(e) => {
+                    log_warn!("TCP semaphore acquire failed for {}: {}", ip, e);
+                    return;
+                }
+            };
 
             let open_ports = probe_host_ports(ip).await;
             if !open_ports.is_empty() {
@@ -67,7 +80,9 @@ pub async fn tcp_probe_scan(
     }
 
     for handle in handles {
-        let _ = handle.await;
+        if let Err(e) = handle.await {
+            log_warn!("TCP probe task failed: {}", e);
+        }
     }
 
     let results = port_results.lock().await;

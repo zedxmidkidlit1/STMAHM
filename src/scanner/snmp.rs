@@ -22,6 +22,13 @@ macro_rules! log_stderr {
     };
 }
 
+/// Logs a warning to stderr
+macro_rules! log_warn {
+    ($($arg:tt)*) => {
+        eprintln!("[WARN] {}", format!($($arg)*));
+    };
+}
+
 /// SNMP enrichment data for a single host
 #[derive(Debug, Clone, Default)]
 pub struct SnmpData {
@@ -143,7 +150,13 @@ pub async fn snmp_enrich(hosts: &[Ipv4Addr]) -> Result<HashMap<Ipv4Addr, SnmpDat
         let results = Arc::clone(&results);
 
         let handle = tokio::spawn(async move {
-            let _permit = semaphore.acquire().await.expect("Semaphore closed");
+            let _permit = match semaphore.acquire().await {
+                Ok(permit) => permit,
+                Err(e) => {
+                    log_warn!("SNMP semaphore acquire failed for {}: {}", ip, e);
+                    return;
+                }
+            };
 
             if let Some(data) = query_host_snmp(ip).await {
                 let mut map = results.lock().await;
@@ -155,7 +168,9 @@ pub async fn snmp_enrich(hosts: &[Ipv4Addr]) -> Result<HashMap<Ipv4Addr, SnmpDat
     }
 
     for handle in handles {
-        let _ = handle.await;
+        if let Err(e) = handle.await {
+            log_warn!("SNMP task failed: {}", e);
+        }
     }
 
     let map = results.lock().await;

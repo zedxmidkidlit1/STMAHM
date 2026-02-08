@@ -23,6 +23,13 @@ macro_rules! log_stderr {
     };
 }
 
+/// Logs a warning to stderr
+macro_rules! log_warn {
+    ($($arg:tt)*) => {
+        eprintln!("[WARN] {}", format!($($arg)*));
+    };
+}
+
 /// Perform reverse DNS lookup for a single IP address
 pub fn reverse_lookup(ip: Ipv4Addr) -> Option<String> {
     let ip_addr = IpAddr::V4(ip);
@@ -57,7 +64,13 @@ pub async fn dns_scan(ips: &[Ipv4Addr]) -> HashMap<Ipv4Addr, String> {
         let results = Arc::clone(&results);
 
         let handle = tokio::spawn(async move {
-            let _permit = semaphore.acquire().await.expect("Semaphore closed");
+            let _permit = match semaphore.acquire().await {
+                Ok(permit) => permit,
+                Err(e) => {
+                    log_warn!("DNS semaphore acquire failed for {}: {}", ip, e);
+                    return;
+                }
+            };
 
             // Run DNS lookup in blocking thread with timeout
             let lookup_result = tokio::time::timeout(
@@ -66,9 +79,16 @@ pub async fn dns_scan(ips: &[Ipv4Addr]) -> HashMap<Ipv4Addr, String> {
             )
             .await;
 
-            if let Ok(Ok(Some(hostname))) = lookup_result {
-                let mut res = results.lock().await;
-                res.insert(ip, hostname);
+            match lookup_result {
+                Ok(Ok(Some(hostname))) => {
+                    let mut res = results.lock().await;
+                    res.insert(ip, hostname);
+                }
+                Ok(Ok(None)) => {}
+                Ok(Err(e)) => {
+                    log_warn!("DNS worker join failed for {}: {}", ip, e);
+                }
+                Err(_) => {}
             }
         });
 
@@ -76,7 +96,9 @@ pub async fn dns_scan(ips: &[Ipv4Addr]) -> HashMap<Ipv4Addr, String> {
     }
 
     for handle in handles {
-        let _ = handle.await;
+        if let Err(e) = handle.await {
+            log_warn!("DNS scan task failed: {}", e);
+        }
     }
 
     let res = results.lock().await;

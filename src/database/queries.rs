@@ -22,35 +22,54 @@ pub struct AlertInsert<'a> {
 
 /// Insert a scan result into the database
 pub fn insert_scan(conn: &Connection, result: &ScanResult) -> Result<i64> {
-    conn.execute(
-        r#"
-        INSERT INTO scans (
-            interface_name, local_ip, local_mac, subnet, scan_method,
-            arp_discovered, icmp_discovered, total_hosts, duration_ms
-        ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)
-        "#,
-        params![
-            result.interface_name,
-            result.local_ip,
-            result.local_mac,
-            result.subnet,
-            result.scan_method,
-            result.arp_discovered as i32,
-            result.icmp_discovered as i32,
-            result.total_hosts as i32,
-            result.scan_duration_ms as i64,
-        ],
-    )
-    .context("Failed to insert scan")?;
+    conn.execute_batch("SAVEPOINT insert_scan")
+        .context("Failed to start insert_scan transaction")?;
 
-    let scan_id = conn.last_insert_rowid();
+    let insert_result = (|| -> Result<i64> {
+        conn.execute(
+            r#"
+            INSERT INTO scans (
+                interface_name, local_ip, local_mac, subnet, scan_method,
+                arp_discovered, icmp_discovered, total_hosts, duration_ms
+            ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)
+            "#,
+            params![
+                result.interface_name,
+                result.local_ip,
+                result.local_mac,
+                result.subnet,
+                result.scan_method,
+                result.arp_discovered as i32,
+                result.icmp_discovered as i32,
+                result.total_hosts as i32,
+                result.scan_duration_ms as i64,
+            ],
+        )
+        .context("Failed to insert scan")?;
 
-    // Insert/update each discovered host
-    for host in &result.active_hosts {
-        upsert_device_from_host(conn, host, scan_id)?;
+        let scan_id = conn.last_insert_rowid();
+
+        // Insert/update each discovered host
+        for host in &result.active_hosts {
+            upsert_device_from_host(conn, host, scan_id)?;
+        }
+
+        Ok(scan_id)
+    })();
+
+    match insert_result {
+        Ok(scan_id) => {
+            conn.execute_batch("RELEASE SAVEPOINT insert_scan")
+                .context("Failed to commit insert_scan transaction")?;
+            Ok(scan_id)
+        }
+        Err(e) => {
+            let _ = conn.execute_batch(
+                "ROLLBACK TO SAVEPOINT insert_scan; RELEASE SAVEPOINT insert_scan",
+            );
+            Err(e)
+        }
     }
-
-    Ok(scan_id)
 }
 
 /// Insert or update a device from scan result
@@ -722,5 +741,51 @@ mod tests {
         let stats = get_network_stats(&conn).unwrap();
         assert_eq!(stats.total_devices, 0);
         assert_eq!(stats.total_scans, 0);
+    }
+
+    #[test]
+    fn test_insert_scan_is_atomic_on_host_failure() {
+        let db = Database::in_memory().unwrap();
+        let conn = db.connection();
+        let conn = conn.lock().unwrap();
+
+        // Force device persistence failure after scan row insert.
+        conn.execute_batch(
+            r#"
+            CREATE TRIGGER fail_device_insert
+            AFTER INSERT ON devices
+            BEGIN
+                SELECT RAISE(FAIL, 'forced device insert failure');
+            END;
+            "#,
+        )
+        .unwrap();
+
+        let host = HostInfo::new(
+            "192.168.1.10".to_string(),
+            "AA:BB:CC:DD:EE:01".to_string(),
+            "UNKNOWN".to_string(),
+            "ARP".to_string(),
+        );
+
+        let result = ScanResult {
+            interface_name: "eth0".to_string(),
+            local_ip: "192.168.1.1".to_string(),
+            local_mac: "AA:BB:CC:DD:EE:FF".to_string(),
+            subnet: "192.168.1.0/24".to_string(),
+            scan_method: "arp+icmp".to_string(),
+            arp_discovered: 1,
+            icmp_discovered: 0,
+            total_hosts: 1,
+            scan_duration_ms: 1500,
+            active_hosts: vec![host],
+        };
+
+        assert!(insert_scan(&conn, &result).is_err());
+
+        let scan_count: i64 = conn
+            .query_row("SELECT COUNT(*) FROM scans", [], |row| row.get(0))
+            .unwrap();
+        assert_eq!(scan_count, 0, "scan row must rollback on host failure");
     }
 }

@@ -31,6 +31,7 @@ tracing-appender = "0.2"
 # Encryption (AES-256 for file encryption)
 aes-gcm = "0.10"
 machine-uid = "0.5"
+argon2 = "0.5"
 sha2 = "0.10"
 hex = "0.4"
 whoami = "1.5"
@@ -42,4 +43,3 @@ mdns-sd = "0.11"
 # Report Export
 printpdf = "0.7"
 csv = "1.3"
-

@@ -122,7 +122,13 @@ pub async fn icmp_scan(
         let results = Arc::clone(&results);
 
         let handle = tokio::spawn(async move {
-            let _permit = semaphore.acquire().await.expect("Semaphore closed");
+            let _permit = match semaphore.acquire().await {
+                Ok(permit) => permit,
+                Err(e) => {
+                    log_warn!("ICMP semaphore acquire failed for {}: {}", ip, e);
+                    return;
+                }
+            };
 
             if let Some(icmp_result) = ping_host_with_retries(&client, ip).await {
                 let mut res = results.lock().await;
@@ -134,7 +140,9 @@ pub async fn icmp_scan(
     }
 
     for handle in handles {
-        let _ = handle.await;
+        if let Err(e) = handle.await {
+            log_warn!("ICMP scan task failed: {}", e);
+        }
     }
 
     let res = results.lock().await;
