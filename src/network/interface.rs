@@ -7,10 +7,10 @@ use std::net::{IpAddr, Ipv4Addr};
 
 use crate::models::InterfaceInfo;
 
-/// Logs a message to stderr
-macro_rules! log_stderr {
+/// Logs a message using structured tracing.
+macro_rules! log_debug {
     ($($arg:tt)*) => {
-        eprintln!("[INFO] {}", format!($($arg)*));
+        tracing::debug!("{}", format!($($arg)*));
     };
 }
 
@@ -30,8 +30,26 @@ fn collect_candidate_interfaces(
     let mut candidates: Vec<InterfaceInfo> = Vec::new();
 
     for pnet_if in pnet_interfaces {
-        // Skip loopback or down interfaces
-        if pnet_if.is_loopback() || !pnet_if.is_up() {
+        // Skip loopback interfaces.
+        if pnet_if.is_loopback() {
+            continue;
+        }
+
+        // On Windows/Npcap, `is_up()` can be false even for usable adapters.
+        // Keep strict behavior on other OSes, but allow Windows adapters that
+        // clearly have a non-zero IPv4 assignment.
+        let has_usable_ipv4 = pnet_if.ips.iter().any(|ip_network| match ip_network.ip() {
+            IpAddr::V4(ipv4) => {
+                !ipv4.is_unspecified()
+                    && ip_network.prefix() > 0
+                    && !(ipv4.octets()[0] == 169 && ipv4.octets()[1] == 254)
+            }
+            IpAddr::V6(_) => false,
+        });
+        if !pnet_if.is_up() && !(cfg!(target_os = "windows") && has_usable_ipv4) {
+            if verbose {
+                log_debug!("Skipping down adapter: {}", pnet_if.name);
+            }
             continue;
         }
 
@@ -45,7 +63,7 @@ fn collect_candidate_interfaces(
         let name_lower = pnet_if.name.to_lowercase();
         if is_virtual_adapter_name(&name_lower) {
             if verbose {
-                log_stderr!("Skipping virtual adapter: {}", pnet_if.name);
+                log_debug!("Skipping virtual adapter: {}", pnet_if.name);
             }
             continue;
         }
@@ -53,6 +71,11 @@ fn collect_candidate_interfaces(
         // Find IPv4 addresses
         for ip_network in &pnet_if.ips {
             if let IpAddr::V4(ipv4) = ip_network.ip() {
+                // Skip unassigned placeholder addresses.
+                if ipv4.is_unspecified() || ip_network.prefix() == 0 {
+                    continue;
+                }
+
                 // Skip link-local (169.254.x.x)
                 if ipv4.octets()[0] == 169 && ipv4.octets()[1] == 254 {
                     continue;
@@ -61,7 +84,7 @@ fn collect_candidate_interfaces(
                 let prefix_len = ip_network.prefix();
 
                 if verbose {
-                    log_stderr!(
+                    log_debug!(
                         "Found candidate interface: {} (IP: {}/{}, MAC: {})",
                         pnet_if.name,
                         ipv4,
@@ -89,7 +112,7 @@ fn collect_candidate_interfaces(
 pub fn find_valid_interface() -> Result<InterfaceInfo> {
     let pnet_interfaces = datalink::interfaces();
 
-    log_stderr!("Scanning {} network interfaces...", pnet_interfaces.len());
+    log_debug!("Scanning {} network interfaces...", pnet_interfaces.len());
 
     let mut candidates = collect_candidate_interfaces(&pnet_interfaces, true);
 
@@ -101,7 +124,7 @@ pub fn find_valid_interface() -> Result<InterfaceInfo> {
     });
 
     if let Some(best) = candidates.into_iter().next() {
-        log_stderr!(
+        log_debug!(
             "Selected interface: {} (IP: {}/{}, MAC: {})",
             best.name,
             best.ip,
@@ -112,9 +135,9 @@ pub fn find_valid_interface() -> Result<InterfaceInfo> {
     }
 
     // Debug output if no interface found
-    log_stderr!("Available interfaces:");
+    tracing::warn!("No valid interface found. Available interfaces:");
     for pnet_if in &pnet_interfaces {
-        log_stderr!(
+        tracing::warn!(
             "  - {} (loopback: {}, mac: {:?}, ips: {:?})",
             pnet_if.name,
             pnet_if.is_loopback(),

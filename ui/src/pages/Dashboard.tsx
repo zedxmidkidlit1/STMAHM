@@ -267,6 +267,11 @@ export default function Dashboard() {
   useEffect(() => {
     let shouldStopOnUnmount = false;
 
+    // Prevent repeated auto-start attempts on re-renders.
+    if (autoStartedMonitor.current) {
+      return;
+    }
+
     try {
       const rawSettings = localStorage.getItem("netmapper-settings");
       if (rawSettings) {
@@ -292,7 +297,7 @@ export default function Dashboard() {
         void monitor.stopMonitoring();
       }
     };
-  }, [monitor]);
+  }, [monitor.startMonitoring, monitor.stopMonitoring]);
 
   useEffect(() => {
     if (monitor.events.length > 0) {

@@ -56,13 +56,17 @@ impl BackgroundMonitor {
     where
         F: Fn(NetworkEvent) + Send + Sync + 'static,
     {
-        if self.is_running.load(Ordering::SeqCst) {
-            return Err("Monitoring already running".to_string());
-        }
-
-        let interval_secs = interval
+        let requested_interval = interval
             .unwrap_or(DEFAULT_MONITOR_INTERVAL)
             .clamp(MIN_MONITOR_INTERVAL, MAX_MONITOR_INTERVAL);
+
+        if self.is_running.load(Ordering::SeqCst) {
+            // Idempotent start: keep current loop and optionally update interval.
+            *self.interval_seconds.lock().await = requested_interval;
+            return Ok(());
+        }
+
+        let interval_secs = requested_interval;
 
         *self.interval_seconds.lock().await = interval_secs;
         self.is_running.store(true, Ordering::SeqCst);
@@ -87,7 +91,7 @@ impl BackgroundMonitor {
 
         // Spawn background scanning task
         tokio::spawn(async move {
-            eprintln!(
+            tracing::info!(
                 "[MONITOR] Background monitoring started (interval: {}s)",
                 interval_secs
             );
@@ -101,7 +105,7 @@ impl BackgroundMonitor {
                     scan_number: current_scan,
                 });
 
-                eprintln!("[MONITOR] Starting scan #{}", current_scan);
+                tracing::debug!("[MONITOR] Starting scan #{}", current_scan);
                 let start = Instant::now();
 
                 // Run the actual scan
@@ -124,7 +128,7 @@ impl BackgroundMonitor {
                             duration_ms: duration,
                         });
 
-                        eprintln!(
+                        tracing::debug!(
                             "[MONITOR] Scan #{} complete: {} hosts in {}ms",
                             current_scan,
                             devices.len(),
@@ -132,7 +136,7 @@ impl BackgroundMonitor {
                         );
                     }
                     Err(e) => {
-                        eprintln!("[MONITOR] Scan #{} failed: {}", current_scan, e);
+                        tracing::warn!("[MONITOR] Scan #{} failed: {}", current_scan, e);
                         (*cb)(NetworkEvent::MonitoringError { message: e });
                     }
                 }
@@ -146,7 +150,7 @@ impl BackgroundMonitor {
                 }
             }
 
-            eprintln!("[MONITOR] Background monitoring stopped");
+            tracing::info!("[MONITOR] Background monitoring stopped");
             (*cb)(NetworkEvent::MonitoringStopped);
         });
 
@@ -300,7 +304,7 @@ fn detect_and_emit_changes<F>(
     // Check for offline devices (known online previously, now missing).
     for (mac, prev_device) in previous_online.iter() {
         if !current_macs.contains_key(mac) {
-            eprintln!("[MONITOR] Device offline: {} ({})", prev_device.ip, mac);
+            tracing::debug!("[MONITOR] Device offline: {} ({})", prev_device.ip, mac);
             callback(NetworkEvent::DeviceWentOffline {
                 mac: mac.clone(),
                 last_ip: prev_device.ip.clone(),
@@ -322,7 +326,7 @@ fn detect_and_emit_changes<F>(
     for device in current {
         if let Some(prev_device) = previous_online.get(&device.mac) {
             if prev_device.ip != device.ip {
-                eprintln!(
+                tracing::debug!(
                     "[MONITOR] IP changed: {} -> {} ({})",
                     prev_device.ip, device.ip, device.mac
                 );
@@ -333,7 +337,7 @@ fn detect_and_emit_changes<F>(
                 });
             }
         } else if let Some(was_offline) = offline_devices.remove(&device.mac) {
-            eprintln!("[MONITOR] Device back online: {} ({})", device.ip, device.mac);
+            tracing::debug!("[MONITOR] Device back online: {} ({})", device.ip, device.mac);
             callback(NetworkEvent::DeviceCameOnline {
                 mac: device.mac.clone(),
                 ip: device.ip.clone(),
@@ -341,7 +345,7 @@ fn detect_and_emit_changes<F>(
             });
 
             if was_offline.device.ip != device.ip {
-                eprintln!(
+                tracing::debug!(
                     "[MONITOR] IP changed while offline: {} -> {} ({})",
                     was_offline.device.ip, device.ip, device.mac
                 );
@@ -352,7 +356,7 @@ fn detect_and_emit_changes<F>(
                 });
             }
         } else {
-            eprintln!("[MONITOR] New device: {} ({})", device.ip, device.mac);
+            tracing::debug!("[MONITOR] New device: {} ({})", device.ip, device.mac);
             callback(NetworkEvent::NewDeviceDiscovered {
                 ip: device.ip.clone(),
                 mac: device.mac.clone(),

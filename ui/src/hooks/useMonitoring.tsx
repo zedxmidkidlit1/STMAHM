@@ -106,10 +106,19 @@ export function useMonitoring(options: UseMonitoringOptions = {}) {
         await fetchStatus();
         setState((prev) => ({ ...prev, isLoading: false }));
       } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+
+        // Idempotent UX: if monitoring is already active, just refresh status.
+        if (message.toLowerCase().includes("already running")) {
+          await fetchStatus();
+          setState((prev) => ({ ...prev, isLoading: false, error: null }));
+          return;
+        }
+
         setState((prev) => ({
           ...prev,
           isLoading: false,
-          error: err instanceof Error ? err.message : String(err),
+          error: message,
         }));
       }
     },
