@@ -41,6 +41,7 @@ Built with **Rust** · **Tauri v2** · **React 19** · **TypeScript** · **SQLit
 - [Troubleshooting](#troubleshooting)
 - [CI/CD](#cicd)
 - [Changelog](#changelog)
+- [Project Upgrade Roadmap](#-project-upgrade-roadmap)
 - [License](#license)
 - [🇲🇲 မြန်မာဘာသာ (Myanmar Language)](#-မြနမဘသ-myanmar-language)
   - [ပရောဂျက်အကြောင်း အကျဉ်းချုပ်](#-ပရောဂျကအကြောငး-အကျဉးချုပ)
@@ -493,6 +494,84 @@ The project uses **GitHub Actions** with `tauri-action` for automated cross-plat
 ## Changelog
 
 See [CHANGELOG.md](./CHANGELOG.md) for release history and notable updates.
+
+---
+
+## 🚀 Project Upgrade Roadmap
+
+This section outlines the planned enhancements to elevate NEXUS to **production-level quality** and ensure a **unique, impressive** presence at the TU Project Show 2026.
+
+### Priority 1 — "WOW Factor" Features
+
+Features that make NEXUS **stand out** from other projects:
+
+| Feature                                 | Description                                                                                                                                                                                                              | Impact                      |
+| --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------- |
+| **🤖 AI-Powered Network Intelligence**  | Integrate local LLM (Ollama) or API (Gemini/OpenAI) for natural language network analysis. Chat-based queries like "Show me suspicious devices", auto anomaly detection, predictive analytics, and AI-generated reports. | 🔥 #1 unique differentiator |
+| **🗺️ 3D Interactive Topology Map**      | Upgrade from 2D to a 3D force-directed graph using Three.js / react-three-fiber with real-time device status animations, rotate/zoom/pan controls.                                                                       | 🎨 High visual impact       |
+| **📱 Network Timeline / Activity Feed** | Visual timeline of all network events with time-range filtering, device filtering, and animated transitions.                                                                                                             | 📊 Great for live demos     |
+
+### Priority 2 — Production-Level Quality
+
+| Feature                     | Status         | Enhancement                                          |
+| --------------------------- | -------------- | ---------------------------------------------------- |
+| Port risk analysis          | ✅ Implemented | Enhanced CVE database lookup                         |
+| Security recommendations    | ✅ Implemented | AI-generated recommendations                         |
+| Network health score        | ✅ Implemented | Historical trend graphs                              |
+| **Bandwidth monitoring**    | ❌ Planned     | Per-device bandwidth usage tracking                  |
+| **Network traffic heatmap** | ❌ Planned     | Device-to-device traffic visualization               |
+| **Rogue device detection**  | ❌ Planned     | Trusted device whitelist + unknown device alerts     |
+| **Desktop notifications**   | ❌ Planned     | OS-level notifications via Tauri notification plugin |
+| **Sound alerts**            | ❌ Planned     | Audio alerts for critical events                     |
+| **Custom alert rules**      | ❌ Planned     | User-defined rules (e.g., "Alert if port 22 opens")  |
+| **Multi-network support**   | ❌ Planned     | Multiple subnet scanning + comparison view           |
+
+### Priority 3 — UI/UX Polish (Show-Ready)
+
+| Enhancement                  | Status                                           |
+| ---------------------------- | ------------------------------------------------ |
+| Animated counters            | ✅ Implemented (react-countup)                   |
+| Smooth page transitions      | ✅ Implemented (framer-motion)                   |
+| Command palette (Ctrl+K)     | ✅ Implemented (cmdk)                            |
+| **Live data streaming**      | Planned — real-time WebSocket-like updates       |
+| **Network map minimap**      | Planned — mini topology in dashboard corner      |
+| **Custom dashboard widgets** | Planned — user-configurable dashboard layout     |
+| **Onboarding tour**          | Planned — first-time user guide with tooltips    |
+| **PDF report branding**      | Planned — project logo + professional formatting |
+| **Multi-language toggle**    | Planned — Myanmar/English in-app toggle          |
+
+### Priority 4 — Technical Production Hardening
+
+| Area        | Item                      | Description                                         |
+| ----------- | ------------------------- | --------------------------------------------------- |
+| Performance | Scan speed                | Parallel scan optimization (batch ARP + async ICMP) |
+| Performance | Database indexing         | Query optimization for large device histories       |
+| Performance | Memory management         | Long-running monitor memory profiling               |
+| Reliability | Error recovery            | Auto-retry for failed scans                         |
+| Reliability | Crash reporting           | Error boundary + local crash logs                   |
+| Reliability | Data backup               | Database auto-backup before risky operations        |
+| Reliability | Graceful shutdown         | Clean monitor/scan stop on app close                |
+| Testing     | Frontend unit tests       | Vitest-based component testing                      |
+| Testing     | Full pipeline integration | End-to-end scan pipeline integration test           |
+| Testing     | E2E tests                 | Playwright desktop automation tests                 |
+
+### Recommended Implementation Timeline
+
+| Week       | Focus                   | Features                                                                     |
+| ---------- | ----------------------- | ---------------------------------------------------------------------------- |
+| **Week 1** | High Impact, Quick Wins | AI Chat Assistant (API-based), Desktop Notifications, Rogue Device Detection |
+| **Week 2** | Visual Impact           | 3D Topology View, Network Timeline, Dashboard Minimap                        |
+| **Week 3** | Polish & Production     | Custom Alert Rules, PDF Report Branding, Onboarding Tour, E2E Tests          |
+
+### Why These Upgrades Make NEXUS Unique
+
+| Feature                     | Uniqueness                                                        |
+| --------------------------- | ----------------------------------------------------------------- |
+| **AI Network Intelligence** | Network tool + AI integration — rare at university-level projects |
+| **3D Topology**             | Exceptional visual impact for judge/audience impressions          |
+| **Rust + Tauri**            | Unique tech stack — most students use Python/Electron             |
+| **Real-time Monitoring**    | Live network events provide excellent demo impact                 |
+| **Security Insights + AI**  | Practical cybersecurity value with real-world applicability       |
 
 ---
 
