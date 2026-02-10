@@ -1,4 +1,4 @@
-<![CDATA[<div align="center">
+<div align="center">
 
 # 🌐 NEXUS — Smart Network Topology Mapper & Health Monitor
 
@@ -11,7 +11,6 @@ Built with **Rust** · **Tauri v2** · **React 19** · **TypeScript** · **SQLit
 [![Build](https://img.shields.io/badge/build-passing-brightgreen)](#verification-commands)
 [![Version](https://img.shields.io/badge/version-0.3.1-blue)](#changelog)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-lightgrey)](#requirements)
-[![License](https://img.shields.io/badge/license-MIT-green)](#license)
 
 </div>
 
@@ -42,7 +41,14 @@ Built with **Rust** · **Tauri v2** · **React 19** · **TypeScript** · **SQLit
 - [Troubleshooting](#troubleshooting)
 - [CI/CD](#cicd)
 - [Changelog](#changelog)
-- [မြန်မာဘာသာ (Myanmar Language)](#-မြနမဘသ-myanmar-language)
+- [License](#license)
+- [🇲🇲 မြန်မာဘာသာ (Myanmar Language)](#-မြနမဘသ-myanmar-language)
+  - [ပရောဂျက်အကြောင်း အကျဉ်းချုပ်](#-ပရောဂျကအကြောငး-အကျဉးချုပ)
+  - [အဓိက Feature များ](#-အဓိက-feature-များ)
+  - [Tech Stack (နည်းပညာ Stack)](#️-tech-stack-နညးပညာ-stack)
+  - [System Requirements (စနစ်လိုအပ်ချက်များ)](#-system-requirements-စနစလိုအပချကများ)
+  - [Quick Start (စတင်နည်း)](#-quick-start-စတငနည)
+  - [Build (Production Build)](#️-build-production-build)
 
 ---
 
@@ -58,125 +64,125 @@ The application performs Layer-2 (ARP) and Layer-3 (ICMP) host discovery, probes
 
 ### 1. 🔍 Network Discovery & Scanning
 
-| Capability | Description |
-|---|---|
-| **Active ARP Scanning** | Layer-2 host discovery using raw ARP packets via `pnet`. Detects all devices on the local subnet even if ICMP is blocked. |
-| **ICMP Ping Probing** | Measures round-trip latency (RTT) and captures TTL values for OS fingerprinting. Runs in parallel with ARP for speed. |
-| **TCP Port Probing** | Scans 20+ common service ports (HTTP, HTTPS, SSH, Telnet, FTP, RDP, SMB, DNS, MQTT, etc.) to detect running services. |
-| **DNS Hostname Resolution** | Reverse DNS lookup for all discovered hosts to resolve human-readable hostnames. |
-| **MAC Vendor Lookup** | Identifies device manufacturers using the IEEE OUI database (`mac_oui` crate). Detects randomized/locally-administered MAC addresses. |
-| **OS Fingerprinting** | Guesses the operating system (Windows, Linux/macOS, Network Device) based on ICMP TTL values. |
-| **Device Type Inference** | Automatically classifies devices as Router, Switch, Server, PC, Mobile, IoT, Printer, or Unknown based on vendor, hostname, open ports, and gateway heuristics. |
-| **SNMP Enrichment** | Optional SNMPv2c polling for system description, hostname, uptime, and LLDP/CDP neighbor discovery for topology mapping. |
-| **Passive mDNS Discovery** | Listens for Multicast DNS (Bonjour/Avahi) service announcements to discover devices without active probing. |
-| **Passive ARP Monitoring** | Captures ARP traffic passively to detect new devices joining the network in real time. |
-| **Risk Score Calculation** | Computes a 0–100 risk score per device based on device type, open ports, and MAC randomization status. |
+| Capability                  | Description                                                                                                                                                     |
+| --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Active ARP Scanning**     | Layer-2 host discovery using raw ARP packets via `pnet`. Detects all devices on the local subnet even if ICMP is blocked.                                       |
+| **ICMP Ping Probing**       | Measures round-trip latency (RTT) and captures TTL values for OS fingerprinting. Runs in parallel with ARP for speed.                                           |
+| **TCP Port Probing**        | Scans 20+ common service ports (HTTP, HTTPS, SSH, Telnet, FTP, RDP, SMB, DNS, MQTT, etc.) to detect running services.                                           |
+| **DNS Hostname Resolution** | Reverse DNS lookup for all discovered hosts to resolve human-readable hostnames.                                                                                |
+| **MAC Vendor Lookup**       | Identifies device manufacturers using the IEEE OUI database (`mac_oui` crate). Detects randomized/locally-administered MAC addresses.                           |
+| **OS Fingerprinting**       | Guesses the operating system (Windows, Linux/macOS, Network Device) based on ICMP TTL values.                                                                   |
+| **Device Type Inference**   | Automatically classifies devices as Router, Switch, Server, PC, Mobile, IoT, Printer, or Unknown based on vendor, hostname, open ports, and gateway heuristics. |
+| **SNMP Enrichment**         | Optional SNMPv2c polling for system description, hostname, uptime, and LLDP/CDP neighbor discovery for topology mapping.                                        |
+| **Passive mDNS Discovery**  | Listens for Multicast DNS (Bonjour/Avahi) service announcements to discover devices without active probing.                                                     |
+| **Passive ARP Monitoring**  | Captures ARP traffic passively to detect new devices joining the network in real time.                                                                          |
+| **Risk Score Calculation**  | Computes a 0–100 risk score per device based on device type, open ports, and MAC randomization status.                                                          |
 
 ### 2. 📡 Real-Time Monitoring & Alerts
 
-| Capability | Description |
-|---|---|
-| **Background Monitor Loop** | Configurable interval-based scanning (default: every 60 seconds) that runs in the background via an async Tokio task. |
+| Capability                  | Description                                                                                                                                   |
+| --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Background Monitor Loop** | Configurable interval-based scanning (default: every 60 seconds) that runs in the background via an async Tokio task.                         |
 | **Device Lifecycle Events** | Detects and emits events for: **New Device**, **Device Offline**, **Device Back Online**, **IP Address Changed**, and **Open Port Detected**. |
-| **Live Event Emission** | Pushes monitor events to the frontend in real time via Tauri's event system (`monitor-event` channel). |
-| **Alert Persistence** | All alerts are saved to the SQLite database with timestamps, severity levels, and device associations. |
-| **Alert Deduplication** | Smart dedupe logic prevents repeated alerts for the same event within a configurable time window using composite dedupe keys. |
-| **Unread/Read Workflow** | Alerts have read/unread status. Users can mark individual alerts as read, mark all as read, or clear all alerts. |
-| **Idempotent Start** | Starting the monitor when it's already running is a no-op, preventing duplicate monitoring loops. |
-| **Auto-Start Integration** | Monitor can be configured to auto-start on application launch via the Settings page. |
+| **Live Event Emission**     | Pushes monitor events to the frontend in real time via Tauri's event system (`monitor-event` channel).                                        |
+| **Alert Persistence**       | All alerts are saved to the SQLite database with timestamps, severity levels, and device associations.                                        |
+| **Alert Deduplication**     | Smart dedupe logic prevents repeated alerts for the same event within a configurable time window using composite dedupe keys.                 |
+| **Unread/Read Workflow**    | Alerts have read/unread status. Users can mark individual alerts as read, mark all as read, or clear all alerts.                              |
+| **Idempotent Start**        | Starting the monitor when it's already running is a no-op, preventing duplicate monitoring loops.                                             |
+| **Auto-Start Integration**  | Monitor can be configured to auto-start on application launch via the Settings page.                                                          |
 
 ### 3. 🗺️ Interactive Topology Visualization
 
-| Capability | Description |
-|---|---|
+| Capability             | Description                                                                                          |
+| ---------------------- | ---------------------------------------------------------------------------------------------------- |
 | **Graph-Based Layout** | Uses `@xyflow/react` (React Flow) with `dagre` auto-layout for hierarchical network topology graphs. |
-| **Device Nodes** | Each device is rendered as an interactive node showing IP, MAC, device type icon, and status. |
-| **Connection Edges** | Connections between devices are drawn based on subnet relationships and SNMP/LLDP neighbor data. |
-| **Zoom & Pan** | Full zoom, pan, and fit-to-view controls for navigating large network topologies. |
-| **Theme-Aware** | Topology colors and styles adapt to the current light/dark theme. |
-| **Layout Algorithms** | Multiple layout strategies with configurable node spacing and ranking. |
+| **Device Nodes**       | Each device is rendered as an interactive node showing IP, MAC, device type icon, and status.        |
+| **Connection Edges**   | Connections between devices are drawn based on subnet relationships and SNMP/LLDP neighbor data.     |
+| **Zoom & Pan**         | Full zoom, pan, and fit-to-view controls for navigating large network topologies.                    |
+| **Theme-Aware**        | Topology colors and styles adapt to the current light/dark theme.                                    |
+| **Layout Algorithms**  | Multiple layout strategies with configurable node spacing and ranking.                               |
 
 ### 4. 🛡️ Security Analysis & Vulnerability Assessment
 
-| Capability | Description |
-|---|---|
-| **Security Grading (A–F)** | Each device receives a letter grade based on a penalty-point system that considers vulnerabilities, port warnings, risk score, and MAC randomization. |
-| **CVE Database** | Embedded CVE vulnerability cache seeded with known vulnerabilities for common vendors (Cisco, Netgear, TP-Link, D-Link, etc.). Matched against discovered device vendors. |
-| **Port Security Warnings** | Detects insecure open ports (Telnet/23, FTP/21, RDP/3389, etc.) and generates actionable warnings with severity ratings and recommendations. |
-| **Vulnerability Filtering** | Context-aware filtering of CVE entries based on device vendor, open ports, and device type for relevant results. |
-| **Security Recommendations** | Auto-generated, prioritized (Critical → Info) security report with affected device lists and remediation advice. |
-| **Vulnerabilities Page** | Dedicated UI page showing all detected vulnerabilities, port warnings, and security grades across the network. |
+| Capability                   | Description                                                                                                                                                               |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Security Grading (A–F)**   | Each device receives a letter grade based on a penalty-point system that considers vulnerabilities, port warnings, risk score, and MAC randomization.                     |
+| **CVE Database**             | Embedded CVE vulnerability cache seeded with known vulnerabilities for common vendors (Cisco, Netgear, TP-Link, D-Link, etc.). Matched against discovered device vendors. |
+| **Port Security Warnings**   | Detects insecure open ports (Telnet/23, FTP/21, RDP/3389, etc.) and generates actionable warnings with severity ratings and recommendations.                              |
+| **Vulnerability Filtering**  | Context-aware filtering of CVE entries based on device vendor, open ports, and device type for relevant results.                                                          |
+| **Security Recommendations** | Auto-generated, prioritized (Critical → Info) security report with affected device lists and remediation advice.                                                          |
+| **Vulnerabilities Page**     | Dedicated UI page showing all detected vulnerabilities, port warnings, and security grades across the network.                                                            |
 
 ### 5. 📊 Network Health Scoring & Insights
 
-| Capability | Description |
-|---|---|
-| **Overall Health Score (0–100)** | Composite score calculated from three weighted components: Security (40 pts), Stability (30 pts), and Compliance (30 pts). |
-| **Health Grade (A–F)** | Letter grade derived from the overall score for quick assessment. |
-| **Score Breakdown** | Detailed breakdown showing individual scores for security posture, network stability (ICMP response rate), and device compliance. |
-| **Actionable Insights** | Auto-generated insight messages (e.g., "⚠️ 3 high-risk devices detected", "🔒 2 devices using randomized MACs"). |
-| **Device Distribution** | Statistical breakdown of device types, vendor distribution, and risk level distribution across the network. |
-| **Network Statistics** | Total devices, scan count, alert count, and historical trend data served via API. |
+| Capability                       | Description                                                                                                                       |
+| -------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| **Overall Health Score (0–100)** | Composite score calculated from three weighted components: Security (40 pts), Stability (30 pts), and Compliance (30 pts).        |
+| **Health Grade (A–F)**           | Letter grade derived from the overall score for quick assessment.                                                                 |
+| **Score Breakdown**              | Detailed breakdown showing individual scores for security posture, network stability (ICMP response rate), and device compliance. |
+| **Actionable Insights**          | Auto-generated insight messages (e.g., "⚠️ 3 high-risk devices detected", "🔒 2 devices using randomized MACs").                  |
+| **Device Distribution**          | Statistical breakdown of device types, vendor distribution, and risk level distribution across the network.                       |
+| **Network Statistics**           | Total devices, scan count, alert count, and historical trend data served via API.                                                 |
 
 ### 6. 📤 Data Export & Reporting
 
-| Capability | Description |
-|---|---|
-| **CSV Export** | Export all known devices or current scan results to CSV format with all fields. |
-| **JSON Export** | Export full scan results or topology data to structured JSON for integration with other tools. |
-| **PDF Scan Report** | Generate a professional PDF report containing scan summary, device inventory, and network statistics. Built with `printpdf`. |
-| **PDF Security Report** | Generate a dedicated network health and security assessment PDF with health scores, security grades, and recommendations. |
-| **File Save Dialog** | Native OS file save dialog integration via Tauri's `dialog` and `fs` plugins for choosing export destinations. |
-| **Reports Page** | A dedicated UI page to generate and download all report types in one place. |
+| Capability              | Description                                                                                                                  |
+| ----------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| **CSV Export**          | Export all known devices or current scan results to CSV format with all fields.                                              |
+| **JSON Export**         | Export full scan results or topology data to structured JSON for integration with other tools.                               |
+| **PDF Scan Report**     | Generate a professional PDF report containing scan summary, device inventory, and network statistics. Built with `printpdf`. |
+| **PDF Security Report** | Generate a dedicated network health and security assessment PDF with health scores, security grades, and recommendations.    |
+| **File Save Dialog**    | Native OS file save dialog integration via Tauri's `dialog` and `fs` plugins for choosing export destinations.               |
+| **Reports Page**        | A dedicated UI page to generate and download all report types in one place.                                                  |
 
 ### 7. 🧰 Built-in Network Tools
 
-| Tool | Description |
-|---|---|
-| **Ping Tool** | Ping any host with configurable count. Returns per-packet latency, TTL, status, and packet loss statistics. |
-| **Port Scanner** | Scan custom port ranges on any target host. Shows port status (open/closed), service name, and response time. |
-| **MAC Vendor Lookup** | Look up the manufacturer of any MAC address using the embedded OUI database. |
-| **Tools Page** | Unified UI page with all three tools in an easy-to-use tabbed interface. |
+| Tool                  | Description                                                                                                   |
+| --------------------- | ------------------------------------------------------------------------------------------------------------- |
+| **Ping Tool**         | Ping any host with configurable count. Returns per-packet latency, TTL, status, and packet loss statistics.   |
+| **Port Scanner**      | Scan custom port ranges on any target host. Shows port status (open/closed), service name, and response time. |
+| **MAC Vendor Lookup** | Look up the manufacturer of any MAC address using the embedded OUI database.                                  |
+| **Tools Page**        | Unified UI page with all three tools in an easy-to-use tabbed interface.                                      |
 
 ### 8. 🗄️ Database & Data Security
 
-| Capability | Description |
-|---|---|
-| **Local SQLite Storage** | All data (scans, devices, device history, alerts, CVE cache, port warnings) stored locally in a SQLite database via `rusqlite`. |
-| **AES-256-GCM Encryption** | Database exports are encrypted using AES-256-GCM with machine-bound keys derived via Argon2id KDF. |
-| **Machine-Bound Keys** | Encryption keys are derived from machine-specific identifiers (machine UID, username, hostname) so exports are tied to the originating machine. |
-| **Legacy Key Compatibility** | Backward-compatible decryption of older exports encrypted with the previous SHA-256 key derivation. |
-| **Schema Migrations** | Automatic, backward-compatible schema migrations (e.g., adding `dedupe_key` column to existing `alerts` tables). |
-| **Performance Indexes** | Strategic database indexes on frequently queried columns (timestamps, MAC addresses, scan IDs, alert status). |
-| **Database Path API** | The database file path is queryable from the frontend for debugging purposes. |
+| Capability                   | Description                                                                                                                                     |
+| ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Local SQLite Storage**     | All data (scans, devices, device history, alerts, CVE cache, port warnings) stored locally in a SQLite database via `rusqlite`.                 |
+| **AES-256-GCM Encryption**   | Database exports are encrypted using AES-256-GCM with machine-bound keys derived via Argon2id KDF.                                              |
+| **Machine-Bound Keys**       | Encryption keys are derived from machine-specific identifiers (machine UID, username, hostname) so exports are tied to the originating machine. |
+| **Legacy Key Compatibility** | Backward-compatible decryption of older exports encrypted with the previous SHA-256 key derivation.                                             |
+| **Schema Migrations**        | Automatic, backward-compatible schema migrations (e.g., adding `dedupe_key` column to existing `alerts` tables).                                |
+| **Performance Indexes**      | Strategic database indexes on frequently queried columns (timestamps, MAC addresses, scan IDs, alert status).                                   |
+| **Database Path API**        | The database file path is queryable from the frontend for debugging purposes.                                                                   |
 
 ### 9. 🎨 Modern Desktop UI
 
-| Feature | Description |
-|---|---|
-| **Mission Control Design** | A premium, modern "Mission Control" design language with consistent typography, spacing, and component styling. |
-| **9 Full Pages** | **Dashboard**, **Topology View**, **Device List**, **Vulnerabilities**, **Alerts**, **Tools**, **Reports**, **Settings**, and **Component Demo**. |
-| **Dark / Light Theme** | Full theme support with a toggle. Sophisticated, non-generic color palettes for both modes. All components are theme-aware. |
-| **Bento Grid Dashboard** | Dashboard uses a Bento-style grid layout with stat cards, health gauges, device charts, recent alerts, and quick actions. |
-| **Animated Charts** | Recharts-powered interactive charts (bar, pie, line) with animated counters (`react-countup`) and circular progress bars. |
-| **Sidebar Navigation** | Collapsible sidebar with icon + label navigation, powered by `lucide-react` icons. |
-| **Custom Title Bar** | Frameless window with a custom-built title bar (minimize, maximize, close) and drag-to-move support. |
-| **Device Detail Modal** | Click any device to view full details: IP, MAC, vendor, OS, open ports, risk score, security grade, and history. |
-| **Keyboard Shortcuts** | Global keyboard shortcuts for navigation and common actions (Ctrl+K for command palette, etc.). |
-| **Command Palette** | `cmdk`-powered command palette for quick access to any page or action. |
-| **Lazy-Loaded Routes** | URL-based page navigation with React lazy loading for optimal bundle splitting. |
-| **Framer Motion Animations** | Smooth page transitions and micro-animations using Framer Motion. |
-| **Virtualized Lists** | `@tanstack/react-virtual` for performant rendering of large device lists. |
-| **Toast Notifications** | `sonner` toast notifications for scan status, export success, and error feedback. |
-| **Responsive Layout** | Minimum window size of 1000×700 with responsive internal layouts. |
+| Feature                      | Description                                                                                                                                       |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Mission Control Design**   | A premium, modern "Mission Control" design language with consistent typography, spacing, and component styling.                                   |
+| **9 Full Pages**             | **Dashboard**, **Topology View**, **Device List**, **Vulnerabilities**, **Alerts**, **Tools**, **Reports**, **Settings**, and **Component Demo**. |
+| **Dark / Light Theme**       | Full theme support with a toggle. Sophisticated, non-generic color palettes for both modes. All components are theme-aware.                       |
+| **Bento Grid Dashboard**     | Dashboard uses a Bento-style grid layout with stat cards, health gauges, device charts, recent alerts, and quick actions.                         |
+| **Animated Charts**          | Recharts-powered interactive charts (bar, pie, line) with animated counters (`react-countup`) and circular progress bars.                         |
+| **Sidebar Navigation**       | Collapsible sidebar with icon + label navigation, powered by `lucide-react` icons.                                                                |
+| **Custom Title Bar**         | Frameless window with a custom-built title bar (minimize, maximize, close) and drag-to-move support.                                              |
+| **Device Detail Modal**      | Click any device to view full details: IP, MAC, vendor, OS, open ports, risk score, security grade, and history.                                  |
+| **Keyboard Shortcuts**       | Global keyboard shortcuts for navigation and common actions (Ctrl+K for command palette, etc.).                                                   |
+| **Command Palette**          | `cmdk`-powered command palette for quick access to any page or action.                                                                            |
+| **Lazy-Loaded Routes**       | URL-based page navigation with React lazy loading for optimal bundle splitting.                                                                   |
+| **Framer Motion Animations** | Smooth page transitions and micro-animations using Framer Motion.                                                                                 |
+| **Virtualized Lists**        | `@tanstack/react-virtual` for performant rendering of large device lists.                                                                         |
+| **Toast Notifications**      | `sonner` toast notifications for scan status, export success, and error feedback.                                                                 |
+| **Responsive Layout**        | Minimum window size of 1000×700 with responsive internal layouts.                                                                                 |
 
 ### 10. 🎮 Demo Mode
 
-| Feature | Description |
-|---|---|
+| Feature            | Description                                                                                       |
+| ------------------ | ------------------------------------------------------------------------------------------------- |
 | **Mock Scan Data** | Pre-loaded realistic network scan data with diverse device types, vendors, and security profiles. |
-| **Mock Alerts** | Sample alerts for showcasing the alerting UI without a live network. |
-| **Demo Toggle** | Hooks to switch between live scanning and demo mode for presentations and testing. |
+| **Mock Alerts**    | Sample alerts for showcasing the alerting UI without a live network.                              |
+| **Demo Toggle**    | Hooks to switch between live scanning and demo mode for presentations and testing.                |
 
 ---
 
@@ -197,7 +203,7 @@ The application performs Layer-2 (ARP) and Layer-3 (ICMP) host discovery, probes
 │                     │ Tauri IPC (invoke / events)         │
 │  ┌──────────────────┴─────────────────────────────────┐  │
 │  │         Tauri Bridge (commands.rs)                  │  │
-│  │  56+ Commands: scan, monitor, alerts, export, ...  │  │
+│  │  29 Commands: scan, monitor, alerts, export, ...   │  │
 │  └──────────────────┬─────────────────────────────────┘  │
 └─────────────────────┼────────────────────────────────────┘
                       │
@@ -221,21 +227,21 @@ The application performs Layer-2 (ARP) and Layer-3 (ICMP) host discovery, probes
 
 ## Tech Stack
 
-| Layer | Technology | Details |
-|---|---|---|
-| **Backend Core** | Rust | `host-discovery` crate — network scanning, data processing, insights engine |
-| **Desktop Shell** | Tauri v2 | Native desktop wrapper with IPC bridge, 56+ typed commands |
-| **Frontend** | React 19 + TypeScript | Vite-powered SPA with Tailwind CSS 4, Framer Motion, Recharts |
-| **Topology** | @xyflow/react + dagre | Interactive graph visualization with hierarchical layout |
-| **Database** | SQLite (rusqlite) | Bundled, zero-config local storage with AES-256-GCM encryption |
-| **Networking** | pnet, surge-ping, dns-lookup | Raw packet crafting, ICMP, DNS resolution |
-| **SNMP** | snmp2 | SNMPv2c device enrichment and neighbor discovery |
-| **mDNS** | mdns-sd | Passive multicast DNS service discovery |
-| **Vendor DB** | mac_oui | IEEE OUI database for MAC-to-vendor mapping |
-| **Encryption** | aes-gcm, argon2, sha2 | AES-256-GCM encryption with Argon2id key derivation |
-| **PDF** | printpdf | Programmatic PDF report generation |
-| **Logging** | tracing + tracing-appender | Structured logging with file rotation |
-| **CI/CD** | GitHub Actions | Automated cross-platform builds and releases via `tauri-action` |
+| Layer             | Technology                   | Details                                                                     |
+| ----------------- | ---------------------------- | --------------------------------------------------------------------------- |
+| **Backend Core**  | Rust                         | `host-discovery` crate — network scanning, data processing, insights engine |
+| **Desktop Shell** | Tauri v2                     | Native desktop wrapper with IPC bridge, 29 typed commands                   |
+| **Frontend**      | React 19 + TypeScript        | Vite-powered SPA with Tailwind CSS 4, Framer Motion, Recharts               |
+| **Topology**      | @xyflow/react + dagre        | Interactive graph visualization with hierarchical layout                    |
+| **Database**      | SQLite (rusqlite)            | Bundled, zero-config local storage with AES-256-GCM encryption              |
+| **Networking**    | pnet, surge-ping, dns-lookup | Raw packet crafting, ICMP, DNS resolution                                   |
+| **SNMP**          | snmp2                        | SNMPv2c device enrichment and neighbor discovery                            |
+| **mDNS**          | mdns-sd                      | Passive multicast DNS service discovery                                     |
+| **Vendor DB**     | mac_oui                      | IEEE OUI database for MAC-to-vendor mapping                                 |
+| **Encryption**    | aes-gcm, argon2, sha2        | AES-256-GCM encryption with Argon2id key derivation                         |
+| **PDF**           | printpdf                     | Programmatic PDF report generation                                          |
+| **Logging**       | tracing + tracing-appender   | Structured logging with file rotation                                       |
+| **CI/CD**         | GitHub Actions               | Automated cross-platform builds and releases via `tauri-action`             |
 
 ---
 
@@ -324,7 +330,7 @@ The application performs Layer-2 (ARP) and Layer-3 (ICMP) host discovery, probes
 │   │       └── mock-data.ts    #     Demo mode data
 │   ├── src-tauri/              # Tauri backend bridge
 │   │   ├── src/
-│   │   │   ├── commands.rs     #   56+ IPC commands
+│   │   │   ├── commands.rs     #   29 IPC commands
 │   │   │   ├── demo_data.rs    #   Demo mock data
 │   │   │   └── main.rs         #   Tauri app entry
 │   │   └── tauri.conf.json     #   Tauri configuration
@@ -400,6 +406,7 @@ npm run tauri build
 ```
 
 This produces platform-specific installers:
+
 - **Windows**: `.msi` (WiX) and `.exe` (NSIS)
 - **Linux**: `.AppImage` and `.deb`
 - **macOS**: `.dmg` and `.app`
@@ -436,11 +443,11 @@ npm --prefix ui run tauri info
 
 Logs are written to your local app data directory:
 
-| OS | Path |
-|---|---|
-| Windows | `C:\Users\<you>\AppData\Local\netmapper\logs\` |
-| Linux | `~/.local/share/netmapper/logs/` |
-| macOS | `~/Library/Application Support/netmapper/logs/` |
+| OS      | Path                                            |
+| ------- | ----------------------------------------------- |
+| Windows | `C:\Users\<you>\AppData\Local\netmapper\logs\`  |
+| Linux   | `~/.local/share/netmapper/logs/`                |
+| macOS   | `~/Library/Application Support/netmapper/logs/` |
 
 ---
 
@@ -449,11 +456,13 @@ Logs are written to your local app data directory:
 ### "No valid interface found" when pressing Start Scan
 
 **Common causes:**
+
 - Npcap not installed or not configured for WinPcap compatibility
 - Application not running with Administrator/root privileges
 - Virtual adapter presenting placeholder data (`0.0.0.0/0`)
 
 **Solutions:**
+
 1. Confirm Npcap is installed with WinPcap compatibility mode.
 2. Run the app as **Administrator** (Windows) or with `sudo` (Linux/macOS).
 3. Disable unused virtual adapters (VPN, Docker, Hyper-V).
@@ -489,9 +498,8 @@ See [CHANGELOG.md](./CHANGELOG.md) for release history and notable updates.
 
 ## License
 
-This project is developed for academic and research purposes.
-
----
+This project is developed for academic and research purposes at Technological University.
+No `LICENSE` file is currently included in this repository.
 
 ---
 
@@ -594,33 +602,37 @@ This project is developed for academic and research purposes.
 
 ## 🛠️ Tech Stack (နည်းပညာ Stack)
 
-| Layer | နည်းပညာ | ရှင်းလင်းချက် |
-|---|---|---|
-| Backend | Rust | Network Scanning, Data Processing, Insights Engine |
-| Desktop Shell | Tauri v2 | Native Desktop Wrapper, IPC Bridge, 56+ Commands |
-| Frontend | React 19 + TypeScript | Vite SPA, Tailwind CSS 4, Framer Motion, Recharts |
-| Database | SQLite (rusqlite) | Local Storage, AES-256-GCM Encryption |
-| Networking | pnet, surge-ping | Raw Packet, ICMP Ping |
-| CI/CD | GitHub Actions | Cross-platform Auto Build & Release |
+| Layer         | နည်းပညာ               | ရှင်းလင်းချက်                                      |
+| ------------- | --------------------- | -------------------------------------------------- |
+| Backend       | Rust                  | Network Scanning, Data Processing, Insights Engine |
+| Desktop Shell | Tauri v2              | Native Desktop Wrapper, IPC Bridge, 29 Commands    |
+| Frontend      | React 19 + TypeScript | Vite SPA, Tailwind CSS 4, Framer Motion, Recharts  |
+| Database      | SQLite (rusqlite)     | Local Storage, AES-256-GCM Encryption              |
+| Networking    | pnet, surge-ping      | Raw Packet, ICMP Ping                              |
+| CI/CD         | GitHub Actions        | Cross-platform Auto Build & Release                |
 
 ---
 
 ## 📦 System Requirements (စနစ်လိုအပ်ချက်များ)
 
 ### Common
+
 - Rust Toolchain (Stable)
 - Node.js 18+ နှင့် npm
 
 ### Windows
+
 - Npcap (WinPcap Compatibility Mode ဖွင့်ထားရန်)
 - Visual Studio Build Tools (C++ Toolchain)
 - **Administrator အဖြစ် Run ရန်**
 
 ### Linux
+
 - `libpcap-dev`, `build-essential`
 - `libwebkit2gtk-4.1-dev`
 
 ### macOS
+
 - `libpcap` (Homebrew မှ)
 - Xcode Command Line Tools
 
@@ -652,6 +664,7 @@ npm run tauri build
 ```
 
 Platform အလိုက် Installer ထွက်ပါသည်:
+
 - **Windows**: `.msi` နှင့် `.exe`
 - **Linux**: `.AppImage` နှင့် `.deb`
 - **macOS**: `.dmg` နှင့် `.app`
@@ -659,4 +672,3 @@ Platform အလိုက် Installer ထွက်ပါသည်:
 ---
 
 > **NEXUS** — Network ကို ပို၍ ရှင်းလင်းမြင်သာ၊ လုံခြုံမှုရှိ၊ ထိန်းချုပ်နိုင်စေရန် ဖန်တီးထားသော Smart Desktop Tool။
-]]>
